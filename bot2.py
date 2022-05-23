@@ -36,8 +36,11 @@ async def on_command_error(ctx,error):
 
 for filename in os.listdir('./cmds'):
     if filename.endswith('.py'):
-        bot.load_extension(f'cmds.{filename[:-3]}')
-        print(filename)
+        try:
+            bot.load_extension(f'cmds.{filename[:-3]}')
+            print(filename)
+        except:
+            print(f"{filename} error")
 if __name__=="__main__":
     with open(os.path.join(".", "botdata.json"), newline='', encoding='UTF-8') as jsonfile:
         botdata = json.load(jsonfile)
