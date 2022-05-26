@@ -11,10 +11,7 @@ class React(Cog_extension):
         
         if str(message.channel.type)=="private":
             return
-        if int(message.channel.id)==900331115703832626:
-            print(message.content)
         for role in message.author.roles :
-          
             if "BOT" == str(role):
                 return
 

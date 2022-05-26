@@ -33,13 +33,13 @@ class transport(Cog_extension):
         tmp=[]
         
         await ctx.send("標記中")
-        least_tall=1200
-        x=1200
+        least_tall=2000
+        x=2000
         while(x<tall):
             flag=check(img,x)
             if flag !=1:
                 tmp.append(flag)
-                x=x+1200
+                x=x+least_tall
                 continue
             x=x+10
         

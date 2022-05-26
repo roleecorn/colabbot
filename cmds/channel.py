@@ -5,6 +5,8 @@ import os
 import json
 from discord import File
 import random
+import sys
+
 class channels(Cog_extension):  
     @commands.command()
     async def find(self,ctx,channelID: int):
@@ -87,5 +89,8 @@ class channels(Cog_extension):
         print(channel)
         channel.clone(name=newname)
         # await guild.create_voice_channel(name=chname)
+
+        
+        
 def setup(bot):
     bot.add_cog(channels(bot))
