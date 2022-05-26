@@ -71,58 +71,62 @@ def battle(player1:list,player2:list,player1name:str,player2name:str,skill1name,
     detail=f"，{defender}  剩下  {defenddata[0]}  點HP"
     descripe=word[random.randint(0,len(word)-1)]+damage+detail
     return (player1,player2,descripe)
+
+def changerank(rankboard,userrank):
+    tmp=rankboard["rank"][str(userrank)]
+    #本體排名-1
+    rankboard[tmp["id"]]['排名'] = rankboard[tmp["id"]]['排名']-1
+    #交換
+    rankboard["rank"][str(userrank)] = rankboard["rank"][str(userrank-1)]
+    rankboard["rank"][str(userrank-1)]=tmp
+    #敵人排名+1
+    tmp=rankboard["rank"][str(userrank)]
+    rankboard[tmp["id"]]['排名'] = rankboard[tmp["id"]]['排名']+1
+    
+    return rankboard
+def checkbalnece(rankboard,userrank):
+    if userrank==1:
+        return True
+    if userrank !=11:
+        challenger = rankboard["rank"][str(userrank)]['win']
+
+    defender = rankboard["rank"][str(userrank-1)]['win']
+    if challenger>defender:
+        return False
+    return True
 def changewin(userid):
     with open(os.path.join("./data/", "rank.json"), newline='', encoding='UTF-8') as jsonfile:
         rank = json.load(jsonfile)
         jsonfile.close()
+    print("new game start")
+    print(rank)
+    print(f"calculate {userid}")
+    print(f"from {rank[userid]['win']}")
     rank[userid]["win"]=rank[userid]["win"]+1
+    print(f"to {rank[userid]['win']}")
     tmp=rank[userid]["排名"]
-    print(userid)
-    if tmp==1:
-        
-        rank["rank"][str(tmp)]["win"]=rank["rank"][str(tmp)]["win"]+1
-        
-        return rank
-    if tmp<11:
-        rank["rank"][str(tmp)]["win"]=rank["rank"][str(tmp)]["win"]+1
-        
-        if rank["rank"][str(tmp)]["win"]>rank["rank"][str(tmp-1)]["win"]:
-            
-            rank=changerank(userid,tmp,rank)
-            
-            return rank
-        
-        return rank
-    if tmp==11:
-        
-        if rank[userid]["win"]>rank["rank"]["10"]["win"]:
-            print("debug0643")
-            tmp = rank["rank"]["10"]["id"]
-            rank[tmp]["排名"]=11
-            rank["rank"]["10"]["id"]=userid
-            rank["rank"]["10"]["win"]=rank[userid]["win"]
-            if rank["rank"]["10"]["win"]>rank["rank"]["9"]["win"]:
-                rank=changerank(userid,10,rank)
-            return rank
-        return rank 
-def changerank(userid,userrank,rankfile):
-    winer=rankfile["rank"][str(userrank)]["id"]
-    loser=rankfile["rank"][str(userrank-1)]["id"]
-    rankfile[winer]["排名"]=rankfile[winer]["排名"]-1
-    rankfile[loser]["排名"]=rankfile[loser]["排名"]+1
-    print("debugchangerank")
-    print(rankfile["rank"])
-    tmp=rankfile["rank"][str(userrank)]
-    rankfile["rank"][str(userrank)]=rankfile["rank"][str(userrank-1)]
-    rankfile["rank"][str(userrank-1)]=tmp
+    print(f'now rank is {rank[userid]["排名"]}' )
     
-    tmp=rankfile["rank"][str(userrank)]
-    if userrank==2:
-        return rankfile
-    if rankfile["rank"][str(userrank-1)]["win"]>rankfile["rank"][str(userrank-2)]["win"]:
-        rankfile=changerank(userid,userrank-1,rankfile)
-        return rankfile
-    return rankfile
+    if tmp !=11:
+        rank["rank"][str(tmp)]["win"]=rank["rank"][str(tmp)]["win"]+1
+    if tmp == 11:
+        if rank[userid]["win"]>rank['rank']["10"]['win']:
+            out_of_rank=rank['rank']["10"]['id']
+            rank[int(out_of_rank)]["排名"]=11
+            rank['rank']["10"]['id']=str(userid)
+            rank['rank']["10"]['win']=rank[userid]["win"]
+            rank[userid]["排名"]=10
+            tmp=10
+        else :
+            return rank
+    flagbalnece=checkbalnece(rank,tmp)
+    while (not flagbalnece):
+        rank=changerank(rank,tmp)
+        tmp=tmp-1
+        flagbalnece=checkbalnece(rank,tmp)
+    print(rank)
+    print("new game end")
+    return rank
 class game(Cog_extension):
     @commands.command()
     @commands.cooldown(3, 1200, commands.BucketType.user)
@@ -135,12 +139,12 @@ class game(Cog_extension):
             return
         with open(os.path.join("./data/", "waiting.csv"), newline='', encoding='UTF-8') as battelfile:
             waiting=battelfile.readline()
-            print(waiting)
+            
             battelfile.close()
 
             if waiting == "1":
                 with open(os.path.join("./data/", "waiting.csv"), newline='', encoding='UTF-8',mode='w') as battelfile:
-                    print(ctx.author)
+                    
                     battelfile.write(str(ctx.author.id))
                     battelfile.close()
                 await ctx.send("排隊中")
@@ -197,6 +201,7 @@ class game(Cog_extension):
             if pok1[0]>0:
                 #waiting勝
                 await channel.send(f"{pok1name}  獲得了勝利")
+                print(f"winner is {waiting}")
                 rank=changewin(waiting)
                 with open(os.path.join("./data/", "rank.json"), "w", encoding='UTF-8') as f:
                     json.dump(rank, f, indent = 4)
@@ -204,6 +209,7 @@ class game(Cog_extension):
                 return
             #ctx.author勝
             await channel.send(f"{pok2name}  獲得了勝利")
+            print(f"winner is {ctx.author.id}")
             rank= changewin(str(ctx.author.id))
             with open(os.path.join("./data/", "rank.json"), "w", encoding='UTF-8') as f:
                 json.dump(rank, f, indent = 4)

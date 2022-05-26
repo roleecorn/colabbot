@@ -24,23 +24,24 @@ class React(Cog_extension):
     @commands.Cog.listener()
     async def on_raw_reaction_add(self,data):
         
-        if str(data.emoji)=="⬆️":
-            guild=self.bot.get_guild(data.guild_id)
-            with open(os.path.join("./data/", "output.json"), newline='') as jsonfile:
-                parrent = json.load(jsonfile)
-                jsonfile.close()
-            if str(data.channel_id) in parrent.keys():
-                print("inparrent.keys")
-                for cid in parrent[str(data.channel_id)]:
-                    print("add")
-                    role=guild.get_role(cid)
-                    print(type(role))
-                    print("find")
-                    await data.member.add_roles(role)
-                    print("find")
-                    cid=738348131724427286
-                    role=guild.get_role(cid)
-                    await data.member.add_roles(role)
+        if str(data.emoji)!="⬆️":
+            return  
+        guild=self.bot.get_guild(data.guild_id)
+        with open(os.path.join("./data/", "output.json"), newline='') as jsonfile:
+            parrent = json.load(jsonfile)
+            jsonfile.close()
+        if str(data.channel_id) in parrent.keys():
+            print("inparrent.keys")
+            for cid in parrent[str(data.channel_id)]:
+                print("add")
+                role=guild.get_role(cid)
+                print(type(role))
+                print("find")
+                await data.member.add_roles(role)
+                print("find")
+                cid=738348131724427286
+                role=guild.get_role(cid)
+                await data.member.add_roles(role)
             
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self,data):

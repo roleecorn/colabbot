@@ -14,14 +14,28 @@ class post(Cog_extension):
         # guild=self.bot.get_guild(ctx.guild_id)
         if ctx.author.id != 534243081135063041:
             return
+        channelid=739739523130327040
+        
         guild=self.bot.get_guild(689838165347139766)
         #aa形象區738239898716471377
         #dice區739739523130327040
-        channel=guild.get_channel(689838165351333917)
+        #2版777541172100857888
         
+        # channel=guild.get_channel(channelid)
+        try :
+            channelid=int(arg[-1])
+            channel=guild.get_channel(channelid)
+        except :
+            channel = None
+        
+        if channel != None:
+            flag=True
+        if channel==None:
+            channel=guild.get_channel(739739523130327040)
+            flag=False
         message=None
-        # print(str(ctx.message.attachments[0]))
-        # print(ctx.message.attachments[0].filename)
+        
+        
         allowed_mention=discord.AllowedMentions(
         users=False,         # Whether to ping individual user @mentions
         everyone=False,      # Whether to ping @everyone or @here mentions
@@ -30,13 +44,14 @@ class post(Cog_extension):
         )
         if len(arg)>0:
             tmp=" "
-            for i in range(len(arg)):
-                tmp=tmp+"\n"+arg[i]
-            await channel.send(content=tmp,reference=None)
-        # if arg !="_":
-        #     arg=arg.split("#")
-        #     for i in range(len(arg)):
-        #         await channel.send(arg[i])
+            if flag:
+                for i in range(len(arg)-1):
+                    tmp=tmp+"\n"+arg[i]
+                await channel.send(content=tmp,reference=None)
+            if (not flag):
+                for i in range(len(arg)):
+                    tmp=tmp+"\n"+arg[i]
+                await channel.send(content=tmp,reference=None)
         if len(ctx.message.attachments)>0:
             await channel.send(ctx.message.attachments[0])
     @commands.command()
