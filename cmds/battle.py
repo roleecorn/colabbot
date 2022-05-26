@@ -99,7 +99,7 @@ def changewin(userid):
         rank = json.load(jsonfile)
         jsonfile.close()
     print("new game start")
-    print(rank)
+    print(rank["rank"])
     print(f"calculate {userid}")
     print(f"from {rank[userid]['win']}")
     rank[userid]["win"]=rank[userid]["win"]+1
@@ -112,7 +112,7 @@ def changewin(userid):
     if tmp == 11:
         if rank[userid]["win"]>rank['rank']["10"]['win']:
             out_of_rank=rank['rank']["10"]['id']
-            rank[int(out_of_rank)]["排名"]=11
+            rank[str(out_of_rank)]["排名"]=11
             rank['rank']["10"]['id']=str(userid)
             rank['rank']["10"]['win']=rank[userid]["win"]
             rank[userid]["排名"]=10
@@ -124,7 +124,7 @@ def changewin(userid):
         rank=changerank(rank,tmp)
         tmp=tmp-1
         flagbalnece=checkbalnece(rank,tmp)
-    print(rank)
+    print(rank["rank"])
     print("new game end")
     return rank
 class game(Cog_extension):
