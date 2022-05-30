@@ -6,7 +6,10 @@ from discord import File
 import json
 import random
 import csv
-
+def writeback(filename:str,jsondata):
+    with open(os.path.join("./data/", filename), "w", encoding='UTF-8') as f:
+        json.dump(jsondata, f, indent = 4)
+        f.close()
 def battle(player1:list,player2:list,player1name:str,player2name:str,skill1name,skill2name):
     # 速度：tmp[5]
     fast=random.randint(1,player1[5]+player2[5])
@@ -98,14 +101,14 @@ def changewin(userid):
     with open(os.path.join("./data/", "rank.json"), newline='', encoding='UTF-8') as jsonfile:
         rank = json.load(jsonfile)
         jsonfile.close()
-    print("new game start")
-    print(rank["rank"])
-    print(f"calculate {userid}")
-    print(f"from {rank[userid]['win']}")
+    # print("new game start")
+    # print(rank["rank"])
+    # print(f"calculate {userid}")
+    # print(f"from {rank[userid]['win']}")
     rank[userid]["win"]=rank[userid]["win"]+1
-    print(f"to {rank[userid]['win']}")
+    # print(f"to {rank[userid]['win']}")
     tmp=rank[userid]["排名"]
-    print(f'now rank is {rank[userid]["排名"]}' )
+    # print(f'now rank is {rank[userid]["排名"]}' )
     
     if tmp !=11:
         rank["rank"][str(tmp)]["win"]=rank["rank"][str(tmp)]["win"]+1
@@ -124,8 +127,8 @@ def changewin(userid):
         rank=changerank(rank,tmp)
         tmp=tmp-1
         flagbalnece=checkbalnece(rank,tmp)
-    print(rank["rank"])
-    print("new game end")
+    # print(rank["rank"])
+    # print("new game end")
     return rank
 class game(Cog_extension):
     @commands.command()
@@ -170,10 +173,14 @@ class game(Cog_extension):
                     loser=pok1name
                     winer=pok2name
                     trainer=challenger
+                    blackcar=ctx.author.id
                 else :
                     loser=pok2name
                     winer=pok1name
                     trainer=ctx.author
+                    blackcar=challenger.id
+                rank= changewin(str(blackcar))
+                writeback("rank.json",rank)
                 descripebox=""
                 descripebox=descripebox+"突然一輛黑色高級車駛來急剎並打開車門，三名訓練家打開車門用超重球持續攻擊你們！\n裁判試圖前沖但肩部中了一記超重球而倒下！\n"
                 descripebox=descripebox+f"由於抱着{trainer.name}，後背多次中球！\n{trainer.name}「  {loser}  ，你在幹什麼啊，  {loser}  ！」\n"
@@ -203,17 +210,19 @@ class game(Cog_extension):
                 await channel.send(f"{pok1name}  獲得了勝利")
                 print(f"winner is {waiting}")
                 rank=changewin(waiting)
-                with open(os.path.join("./data/", "rank.json"), "w", encoding='UTF-8') as f:
-                    json.dump(rank, f, indent = 4)
-                    f.close()
+                writeback("rank.json",rank)
+                # with open(os.path.join("./data/", "rank.json"), "w", encoding='UTF-8') as f:
+                #     json.dump(rank, f, indent = 4)
+                #     f.close()
                 return
             #ctx.author勝
             await channel.send(f"{pok2name}  獲得了勝利")
             print(f"winner is {ctx.author.id}")
             rank= changewin(str(ctx.author.id))
-            with open(os.path.join("./data/", "rank.json"), "w", encoding='UTF-8') as f:
-                json.dump(rank, f, indent = 4)
-                f.close()
+            writeback("rank.json",rank)
+            # with open(os.path.join("./data/", "rank.json"), "w", encoding='UTF-8') as f:
+            #     json.dump(rank, f, indent = 4)
+            #     f.close()
             return
 
 def setup(bot):

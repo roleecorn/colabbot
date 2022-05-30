@@ -48,9 +48,10 @@ class game(Cog_extension):
         with open(os.path.join("./data/", "rank.json"), newline='', encoding='UTF-8') as jsonfile:
             rank = json.load(jsonfile)
             jsonfile.close()
-        rank[str(ctx.author.id)]["win"]=0
-        rank[str(ctx.author.id)]["lose"]=0
-        rank[str(ctx.author.id)]["排名"]=11
+        rank[str(ctx.author.id)]={"win":0, 'lose':0, "排名":11}
+        # rank[str(ctx.author.id)]["win"]=0
+        # rank[str(ctx.author.id)]["lose"]=0
+        # rank[str(ctx.author.id)]["排名"]=11
         with open(os.path.join("./data/", "rank.json"), "w", encoding='UTF-8') as f:
             json.dump(rank, f, indent = 4)
             f.close()

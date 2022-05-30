@@ -46,21 +46,25 @@ class transport(Cog_extension):
         await ctx.send("切割中")
         img = cv2.imread(f"./picture/{attachment.filename}", cv2.IMREAD_COLOR)
         # tmp2=1
-        
+        print(tmp)
         for i in range(len(tmp)):
             if i==0:
                 crop_img = img[0:tmp[i], 0:wide]
                 if tmp[i]>6000:
                     tmp2=tmp2+1
+               
             if i !=0:
                 crop_img = img[tmp[i-1]:tmp[i], 0:wide]
                 if tmp[i]-tmp[i-1]>6000:
                     tmp2=tmp2+1
+                
             cv2.imwrite(f"./picture/{tmp2}.png", crop_img)
+            
             tmp2=tmp2+1
         crop_img = img[tmp[i]:tall, 0:wide]
         
         cv2.imwrite(f"./picture/{tmp2}.png", crop_img)
+        
         zip_fp = zipfile.ZipFile('cutfile.zip', 'w')
         await ctx.send("打包中")
         os.remove(os.path.join("./picture",attachment.filename))
@@ -68,19 +72,21 @@ class transport(Cog_extension):
         for filename in os.listdir(f'./picture'):
             cize=cize+os.path.getsize(os.path.join("./picture",filename))
 
-            # print(cize)
+            
             if cize>7000000:
                 cize=os.path.getsize(os.path.join("./picture",filename))
                 zip_fp.close()
-                # print("close")
+                
                 await ctx.send(file=discord.File("cutfile.zip"))
                 
                 zip_fp = zipfile.ZipFile('cutfile.zip', 'w')
-                # print("startnew")
+                
                 
             zip_fp.write(os.path.join("./picture",filename))
-            # print(f"write{filename}")
+            
+            
             os.remove(os.path.join("./picture",filename))
+            
         zip_fp.close()
         await ctx.send(file=discord.File("cutfile.zip"))
         # os.system(f"rm -rf {cutfile.zip}")
