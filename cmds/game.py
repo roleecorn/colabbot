@@ -57,24 +57,10 @@ class game(Cog_extension):
             f.close()
         await ctx.send("恭喜，你有了新的寶可夢了")
         await ctx.send(f"他的數值為\n```\n等級：{tmp[6]}\n屬性：{tmp[7]}\nＨＰ：{tmp[0]}\n攻擊：{tmp[1]}\n防禦：{tmp[2]}\n特攻：{tmp[3]}\n特防：{tmp[4]}\n速度：{tmp[5]}\n```")
-    @commands.command()
-    async def mypokemon(self,ctx):
-        with open(os.path.join("./data/", "pokemon.json"), newline='', encoding='UTF-8') as jsonfile:
-            pokemon = json.load(jsonfile)
-            jsonfile.close()
-        if str(ctx.author.id) not in pokemon.keys():
-            await ctx.send("你還沒有領取寶可夢喔\n領取寶可夢方法:\n&&create 你的寶可夢的名字")
-            return
-        tmp=pokemon[str(ctx.author.id)][1]
-        await ctx.send(f"```\n名字：{pokemon[str(ctx.author.id)][0]}\n屬性：{tmp[7]}\n等級：{tmp[6]}\nＨＰ：{tmp[0]}\n攻擊：{tmp[1]}\n防禦：{tmp[2]}\n特攻：{tmp[3]}\n特防：{tmp[4]}\n速度：{tmp[5]}\n```")
-        with open(os.path.join("./data/", "skill.json"), newline='', encoding='UTF-8') as jsonfile:
-            skill = json.load(jsonfile)
-            jsonfile.close()
-        skills=list(skill[str(ctx.author.id)].keys())
-        await ctx.send(f"```\n他的招式有\n{skills[0]} :增加{skill[str(ctx.author.id)][skills[0]]}點傷害\n{skills[1]} :增加{skill[str(ctx.author.id)][skills[1]]}點傷害\n{skills[2]} :增加{skill[str(ctx.author.id)][skills[2]]}點傷害\n{skills[3]} :增加{skill[str(ctx.author.id)][skills[3]]}點傷害\n```")
+   
 
     @commands.command()
-    async def pokemonset(self,ctx,mode,arg1,arg2="none"):
+    async def pokemonset(self,ctx,mode,arg1="none",arg2="none"):
         with open(os.path.join("./data/", "pokemon.json"), newline='', encoding='UTF-8') as jsonfile:
             pokemon = json.load(jsonfile)
             jsonfile.close()
@@ -82,6 +68,9 @@ class game(Cog_extension):
             await ctx.send("你還沒有領取寶可夢喔\n領取寶可夢方法:\n&&create 你的寶可夢的名字")
             return
         if mode=="name":
+            if arg1=="none":
+                await ctx.send("請輸入名字")
+                return
             if len(arg1)>9:
                 await ctx.send("名字不能這麼長")
                 return
@@ -119,6 +108,24 @@ class game(Cog_extension):
                 json.dump(skill, f, indent = 4)
                 f.close()
             await ctx.send(f"忘記了{arg1}後學會了{arg2}")
+            return
+        if mode == "stamp":
+            if not(arg1):
+                await ctx.send(f"請輸入圖片位置")
+                return
+            with open(os.path.join("./data/", "stamp.json"), newline='', encoding='UTF-8') as jsonfile:
+                stamp = json.load(jsonfile)
+                jsonfile.close()
+            print(str(ctx.message.attachments[0]))
+            
+            stamp[str(ctx.author.id)]=str(ctx.message.attachments[0])
+            print(stamp)
+            
+            
+            with open(os.path.join("./data/", "stamp.json"), "w", encoding='UTF-8') as f:
+                json.dump(stamp, f, indent = 4)
+                f.close()
+            await ctx.send("新增了照片")
             return
         await ctx.send(f"還沒有{mode}這個指令")
         return
