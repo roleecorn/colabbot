@@ -7,7 +7,7 @@ import json
 # bot = discord.Client()
 intents = discord.Intents.default()
 intents.members = True
-bot = commands.Bot(intents=intents,command_prefix='&&')
+bot = commands.Bot(intents=intents,command_prefix='-')
 @bot.command()
 async def load(ctx,extension):
     if ctx.author.id==534243081135063041:
