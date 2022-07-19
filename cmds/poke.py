@@ -3,6 +3,7 @@ from discord.ext import commands
 from core.classes import Cog_extension
 import os
 import json
+
 def changetofull(datas:int):
     datas=str(datas)
     fullnumber={"1":"１","2":"２","3":"３","4":"４","5":"５","6":"６","7":"７","8":"８","9":"９","0":"０"}
