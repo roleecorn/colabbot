@@ -5,7 +5,9 @@ from core.classes import Cog_extension
 import json
 
 # bot = discord.Client()
-bot = commands.Bot(command_prefix='&&')
+intents = discord.Intents.default()
+intents.members = True
+bot = commands.Bot(intents=intents,command_prefix='&&')
 @bot.command()
 async def load(ctx,extension):
     if ctx.author.id==534243081135063041:

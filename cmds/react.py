@@ -35,8 +35,9 @@ class React(Cog_extension):
             for cid in parrent[str(data.channel_id)]:
                 print("add")
                 role=guild.get_role(cid)
-                print(type(role))
-                print("find")
+                if not role :
+                    continue
+
                 await data.member.add_roles(role)
                 print("find")
                 cid=738348131724427286
@@ -56,6 +57,8 @@ class React(Cog_extension):
             if str(data.channel_id) in parrent.keys():
                 for cid in parrent[str(data.channel_id)]:
                     role=guild.get_role(cid)
+                    if not role :
+                        continue
                     await member.remove_roles(role)
         
 def setup(bot):

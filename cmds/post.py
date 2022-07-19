@@ -173,5 +173,15 @@ class post(Cog_extension):
         member = await guild.fetch_member(victim)
           
         await member.remove_roles(role) 
+    @commands.command()    
+    async def ban(self,ctx,banner:int):
+        if ctx.author.id != 534243081135063041:
+            return
+        guild=self.bot.get_guild(689838165347139766)
+        banner=await self.bot.fetch_user(banner)
+        print(banner)
+        
+        await guild.ban(user=banner, reason="bot",delete_message_days=0)
+        print(guild.banner_url)
 def setup(bot):
     bot.add_cog(post(bot))
