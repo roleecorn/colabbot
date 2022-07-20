@@ -6,9 +6,10 @@ import json
 import random
 import sqlite3
 import pandas as pd
-from Module_a.svs import battle,car
+from Module_a.svs import car,battledemo
+
 from Module_a.calaulate import final
-status = sqlite3.connect("data/pokemon.db")
+
 
 def writeback(filename:str,jsondata):
     with open(os.path.join("./data/", filename), "w", encoding='UTF-8') as f:
@@ -80,7 +81,7 @@ class game(Cog_extension):
             waiting=battelfile.readline()
             
             battelfile.close()
-
+        
         if waiting == "1":
             with open(os.path.join("./data/", "waiting.csv"), newline='', encoding='UTF-8',mode='w') as battelfile:   
                 battelfile.write(str(ctx.author.id))
@@ -91,32 +92,57 @@ class game(Cog_extension):
         if waiting == str(ctx.author.id):
             await ctx.send("不能跟自己對打喔")
             return
+        
+        try:
+            status = sqlite3.connect("/gdrive/My Drive/colabpractice/dcbot/data/pokemon.db")
+            qry = f"SELECT * FROM pokemon where id={ctx.author.id} "
+            
+            dfa = pd.read_sql_query(qry, status)
+            qry = f"SELECT * FROM pokemon where id={waiting} "
+            dfd = pd.read_sql_query(qry, status)
+            status.close()
+
+        except:
+            await ctx.channel.send("抱歉出了bug，請聯繫<@534243081135063041>來修正")
+            return
         with open(os.path.join("./data/", "waiting.csv"), newline='', encoding='UTF-8',mode='w') as battelfile:
             battelfile.write("1")
             battelfile.close()
-        pok1=pokemon[waiting][1]
-        pok1name=pokemon[waiting][0]
-        pok2=pokemon[str(ctx.author.id)][1]
-        pok2name=pokemon[str(ctx.author.id)][0]
-        blackcar=random.random()
+        
+        # pok1=pokemon[waiting][1]
+        # # pok1name=pokemon[waiting][0]
+        # pok2=pokemon[str(ctx.author.id)][1]
+        # # pok2name=pokemon[str(ctx.author.id)][0]
+        try:
+            poka=dfa.iloc[0]
+            
+            pokd=dfd.iloc[0]
+            pok1name=pokd['name']
+            pok2name=poka['name']
+
+        except:
+            await ctx.channel.send("抱歉出了bug，請聯繫<@534243081135063041>來修正")
+        
+        
         guild=self.bot.get_guild(689838165347139766)
         channel=guild.get_channel(739739523130327040)
         challenger = await guild.fetch_member(int(waiting))
-        # await channel.send(f"展開  {ctx.author.mention}  與  {challenger.mention}  的對戰")
+        await channel.send(f"展開  {ctx.author.mention}  與  {challenger.mention}  的對戰")
+        blackcar=random.random()
         if blackcar<0.03:
             if random.random()<0.5:
                 loser=pok1name
-                
+                winer=pok2name
                 trainer=challenger.name
                 blackcar=ctx.author.id
             else :
                 loser=pok2name
-                
+                winer=pok1name
                 trainer=ctx.author.name
                 blackcar=challenger.id
             rank= changewin(str(blackcar))
             writeback("rank.json",rank)
-            descripebox=car(trainer,loser)
+            descripebox=car(trainer,loser,winer)
             return
         with open(os.path.join("./data/", "skill.json"), newline='', encoding='UTF-8') as jsonfile:
             skill = json.load(jsonfile)
@@ -124,23 +150,27 @@ class game(Cog_extension):
         skill1=skill[waiting]
         skill2=skill[str(ctx.author.id)]
         descripebox=""
-        while (pok1[0]>0 and pok2[0]>0):
+
+        while (pokd['hp']>0 and poka["hp"]>0):
             chooseskill1=random.sample(skill1.keys(),1)
             chooseskill2=random.sample(skill2.keys(),1)
-            (pok1,pok2,descripe)=battle(pok1,pok2,pok1name,pok2name,chooseskill1[0],chooseskill2[0])
+
+            (pokd,poka,descripe)=battledemo(pokd,poka,pok1name,pok2name,chooseskill1[0],chooseskill2[0])
+        
+
             descripebox=descripebox+descripe+"\n"
-        # await channel.send(descripebox)
-        print(descripebox)
-        if pok1[0]>0:
+        await channel.send(descripebox)
+        
+        if pokd['hp']>0:
             #waiting勝
-            # await channel.send(f"{pok1name}  獲得了勝利")
+            await channel.send(f"{pok1name}  獲得了勝利")
             print(f"winner is {waiting}")
             rank=changewin(waiting)
             writeback("rank.json",rank)
             final(int(waiting),ctx.author.id)
             return
         #ctx.author勝
-        # await channel.send(f"{pok2name}  獲得了勝利")
+        await channel.send(f"{pok2name}  獲得了勝利")
         print(f"winner is {ctx.author.id}")
         rank= changewin(str(ctx.author.id))
         writeback("rank.json",rank)

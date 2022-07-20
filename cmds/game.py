@@ -5,22 +5,16 @@ import os
 # from discord import File
 import json
 import random
-import sqlite3
+# import sqlite3
 from Module_a.nameformat import checkname
-status = sqlite3.connect("data/pokemon.db")
-win_and_lose =sqlite3.connect("data/win_and_lose.db")
+
 class game(Cog_extension):
     @commands.command()
     async def create(self,ctx,name):
         if (checkname(name)):
             await ctx.send(checkname(name))
             return
-        # if len(name)>9:
-        #     await ctx.send("名字不能這麼長")
-        #     return
-        # if ("-" in name) or ("*" in name) or ("/" in name) or ("|" in name) or ("`" in name) or ("_" in name):
-        #     await ctx.send("名字不能含有奇怪的符號")
-        #     return
+        
         with open(os.path.join("./data/", "pokemon.json"), newline='', encoding='UTF-8') as jsonfile:
             pokemon = json.load(jsonfile)
             jsonfile.close()
@@ -48,9 +42,9 @@ class game(Cog_extension):
         spatk=tmp[3]
         spdef=tmp[4]
         
-        cmd = "insert into pokemon(id	,name,typea,typeb,level,hp,	speed,	atk,	def,	spatk,	spdef) values('{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}')".format(str(ctx.author.id),name,atype,btype,level,hp,speed,atk,defv,spatk,spdef)
-        status.execute(cmd)
-        status.commit()
+        # cmd = "insert into pokemon(id	,name,typea,typeb,level,hp,	speed,	atk,	def,	spatk,	spdef) values('{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}')".format(str(ctx.author.id),name,atype,btype,level,hp,speed,atk,defv,spatk,spdef)
+        # status.execute(cmd)
+        # status.commit()
         with open(os.path.join("./data/", "pokemon.json"), "w", encoding='UTF-8') as f:
             json.dump(pokemon, f, indent = 4)
             f.close()

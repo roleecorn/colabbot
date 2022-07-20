@@ -7,7 +7,7 @@ import json
 # bot = discord.Client()
 intents = discord.Intents.default()
 intents.members = True
-bot = commands.Bot(intents=intents,command_prefix='-')
+bot = commands.Bot(intents=intents,command_prefix='&&')
 @bot.command()
 async def load(ctx,extension):
     if ctx.author.id==534243081135063041:
@@ -42,7 +42,7 @@ for filename in os.listdir('./cmds'):
             bot.load_extension(f'cmds.{filename[:-3]}')
             print(filename)
         except:
-            print(f"{filename} error")
+            print(f"{filename} error!error!error!error!error!error!error!")
 if __name__=="__main__":
     with open(os.path.join(".", "botdata.json"), newline='', encoding='UTF-8') as jsonfile:
         botdata = json.load(jsonfile)
