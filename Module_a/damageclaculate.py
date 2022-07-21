@@ -2,10 +2,10 @@ import pandas as pd
 import csv
 from random import randint
 
-
+poketype=pd.read_csv("data/屬性克制.csv",index_col="屬性")
 def ele(p11,p12,p21,p22):
 
-    poketype=pd.read_csv("data/屬性克制.csv",index_col="屬性")
+    # poketype=pd.read_csv("data/屬性克制.csv",index_col="屬性")
     tmp1=poketype.loc[p11][p21]
     try:
         tmp2=poketype.loc[p11][p22]

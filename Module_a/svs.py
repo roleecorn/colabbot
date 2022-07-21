@@ -1,68 +1,9 @@
 import random
 from Module_a.scribe import normal,critical,defence,counter
-from Module_a.damageclaculate import damagecal,ele
-# def battle(player1:list,player2:list,player1name:str,player2name:str,skill1name,skill2name):
-#     # 速度：tmp[5]
-#     # pok1=[pokd['hp'],pokd["atk"],pokd['defv'],pokd["spatk"],pokd['spdef'],pokd["speed"],pokd['speed'],pokd["level"],pokd['atype']]
-#     # pok2=[poka['hp'],poka["atk"],poka['defv'],poka["spatk"],poka['spdef'],poka["speed"],poka['speed'],poka["level"],poka['atype']]
-#     fast=random.randint(1,player1[5]+player2[5])
-#     if fast<= player1[5]:
-#         attacker=player1name
-#         attackdata=player1
-#         defender=player2name
-#         defenddata=player2
-#         skill=skill1name
-#     else :
-#         attacker=player2name
-#         attackdata=player2
-#         defender=player1name
-#         defenddata=player1
-#         skill=skill2name
-#     attackmode=random.random()
-#     # ＨＰ：tmp[0]
-#     if attackmode<0.1:
+from Module_a.damageclaculate import damagecal,ele,poketype
 
-#         word=counter(attacker,defender,skill)
-#         tmp=random.randint(5,10)
-#         damage =f"{defender} 造成了  {tmp}  點傷害"
-#         attackdata[0]=attackdata[0]-tmp
-#         detail=f"，{attacker}  剩下  {attackdata[0]}  點HP"
-#         descripe=word+damage+detail
-        
-#         return (player1,player2,descripe)
-#     if attackmode<0.3:
-
-#         word=defence(attacker,defender,skill)
-#         tmp=0
-#         damage =f"{attacker}  沒有造成任何傷害"
-#         defenddata[0]=defenddata[0]-tmp
-#         detail=f"，{defender}  剩下  {defenddata[0]}  點HP"
-#         descripe=word+damage+detail
-#         return (player1,player2,descripe)
-      
-
-    
-#     if attackmode<0.9:
-#         word=normal(attacker,defender,skill)
-#         tmp=random.randint(5,15)
-#         damage =f"{attacker} 造成了  {tmp}  點傷害"
-#         defenddata[0]=defenddata[0]-tmp
-#         detail=f"，{defender}  剩下  {defenddata[0]}  點HP"
-#         descripe=word+damage+detail
-#         return (player1,player2,descripe)
-#     if attackmode >= 0.9:
-#         word=critical(attacker,defender,skill)
-#         tmp=random.randint(15,20)
-#         damage =f"{attacker} 造成了  {tmp}  點傷害"
-#         defenddata[0]=defenddata[0]-tmp
-#         detail=f"，{defender}  剩下  {defenddata[0]}  點HP"
-#         descripe=word+damage+detail
-#         return (player1,player2,descripe)
-#     return (player1,player2,"")
 def battledemo(player1,player2,player1name:str,player2name:str,skill1name,skill2name):
-    # 速度：tmp[5]
-    # pok1=[pokd['hp'],pokd["atk"],pokd['defv'],pokd["spatk"],pokd['spdef'],pokd["speed"],pokd['speed'],pokd["level"],pokd['atype']]
-    # pok2=[poka['hp'],poka["atk"],poka['defv'],poka["spatk"],poka['spdef'],poka["speed"],poka['speed'],poka["level"],poka['atype']]
+
     fast=random.randint(1,player1["speed"]+player2["speed"])
     if fast<= player1["speed"]:
         attacker=player1name
@@ -79,7 +20,7 @@ def battledemo(player1,player2,player1name:str,player2name:str,skill1name,skill2
     attackmode=random.random()
     tmp=damagecal(player1,player2)
     
-    # ＨＰ：tmp[0]
+
     if attackmode<0.1:
         tmp=tmp
         word=counter(attacker,defender,skill)

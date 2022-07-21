@@ -13,8 +13,8 @@ def final(winer:int,loser:int):
     print(pathlib.Path(__file__).parent.absolute())
     # win_and_lose =sqlite3.connect("/gdrive/MyDrive/colabpractice/dcbot/data/win_and_lose.db")
     win_and_lose =sqlite3.connect("/gdrive/My Drive/colabpractice/dcbot/data/win_and_lose.db")
-    cmd='SELECT name FROM sqlite_master WHERE type = "table"'
-    print(win_and_lose.execute(cmd))
+    # cmd='SELECT name FROM sqlite_master WHERE type = "table"'
+    # print(win_and_lose.execute(cmd))
     qry = f"SELECT * FROM wl where id={winer} "
     df = pd.read_sql_query(qry, win_and_lose)
     money=df['money'][0]
