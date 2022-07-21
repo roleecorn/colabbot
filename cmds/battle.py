@@ -71,16 +71,42 @@ class game(Cog_extension):
     @commands.command()
     @commands.cooldown(3, 1200, commands.BucketType.user)
     async def duel(self,ctx):
-        with open(os.path.join("./data/", "pokemon.json"), newline='', encoding='UTF-8') as jsonfile:
-            pokemon = json.load(jsonfile)
-            jsonfile.close()
-        if str(ctx.author.id) not in pokemon.keys():
-            await ctx.send("你沒有寶可夢，請先領一隻\n領取寶可夢方法:\n&&create 你的寶可夢的名字")
-            return
         with open(os.path.join("./data/", "waiting.csv"), newline='', encoding='UTF-8') as battelfile:
             waiting=battelfile.readline()
             
             battelfile.close()
+        
+        
+        
+        if waiting == str(ctx.author.id):
+            await ctx.send("不能跟自己對打喔")
+            return
+        
+        
+        # with open(os.path.join("./data/", "pokemon.json"), newline='', encoding='UTF-8') as jsonfile:
+        #     pokemon = json.load(jsonfile)
+        #     jsonfile.close()
+        # if str(ctx.author.id) not in pokemon.keys():
+        #     await ctx.send("你沒有寶可夢，請先領一隻\n領取寶可夢方法:\n&&create 你的寶可夢的名字")
+        #     return
+        
+        try:
+            status = sqlite3.connect("/gdrive/My Drive/colabpractice/dcbot/data/pokemon.db")
+            qry = f"SELECT * FROM pokemon where id={ctx.author.id} "
+            
+            dfa = pd.read_sql_query(qry, status)
+            if (dfa.empty):
+                await ctx.send("你沒有寶可夢，請先領一隻\n領取寶可夢方法:\n&&create 你的寶可夢的名字")
+                status.close()
+                return
+            # qry = f"SELECT * FROM pokemon where id={waiting} "
+            # dfd = pd.read_sql_query(qry, status)
+            
+            # status.close()
+
+        except:
+            await ctx.channel.send("抱歉出了bug，請聯繫<@534243081135063041>來修正")
+            return
         
         if waiting == "1":
             with open(os.path.join("./data/", "waiting.csv"), newline='', encoding='UTF-8',mode='w') as battelfile:   
@@ -88,20 +114,13 @@ class game(Cog_extension):
                 battelfile.close()
             await ctx.send("排隊中")
             return
-        
-        if waiting == str(ctx.author.id):
-            await ctx.send("不能跟自己對打喔")
-            return
-        
         try:
-            status = sqlite3.connect("/gdrive/My Drive/colabpractice/dcbot/data/pokemon.db")
-            qry = f"SELECT * FROM pokemon where id={ctx.author.id} "
-            
-            dfa = pd.read_sql_query(qry, status)
             qry = f"SELECT * FROM pokemon where id={waiting} "
             dfd = pd.read_sql_query(qry, status)
+            if(dfd.empty):
+                await ctx.channel.send("抱歉出了bug，請聯繫<@534243081135063041>來修正")
+                return
             status.close()
-
         except:
             await ctx.channel.send("抱歉出了bug，請聯繫<@534243081135063041>來修正")
             return
