@@ -133,16 +133,18 @@ class game(Cog_extension):
             if random.random()<0.5:
                 loser=pok1name
                 winer=pok2name
-                trainer=challenger.name
-                blackcar=ctx.author.id
+                trainer=challenger
+                blackcar=ctx.author
             else :
                 loser=pok2name
                 winer=pok1name
-                trainer=ctx.author.name
-                blackcar=challenger.id
-            rank= changewin(str(blackcar))
-            writeback("rank.json",rank)
-            descripebox=car(trainer,loser,winer)
+                trainer=ctx.author
+                blackcar=challenger
+            # rank= changewin(str(blackcar))
+            # writeback("rank.json",rank)
+            final(blackcar.id,trainer.id)
+            descripebox=car(trainer.name,loser,winer)
+            await channel.send(descripebox)
             return
         with open(os.path.join("./data/", "skill.json"), newline='', encoding='UTF-8') as jsonfile:
             skill = json.load(jsonfile)
@@ -165,15 +167,15 @@ class game(Cog_extension):
             #waiting勝
             await channel.send(f"{pok1name}  獲得了勝利")
             print(f"winner is {waiting}")
-            rank=changewin(waiting)
-            writeback("rank.json",rank)
+            # rank=changewin(waiting)
+            # writeback("rank.json",rank)
             final(int(waiting),ctx.author.id)
             return
         #ctx.author勝
         await channel.send(f"{pok2name}  獲得了勝利")
         print(f"winner is {ctx.author.id}")
-        rank= changewin(str(ctx.author.id))
-        writeback("rank.json",rank)
+        # rank= changewin(str(ctx.author.id))
+        # writeback("rank.json",rank)
         final(ctx.author.id,int(waiting))
         return
 
