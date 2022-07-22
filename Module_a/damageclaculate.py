@@ -20,8 +20,9 @@ def ele(p11,p12,p21,p22):
     except:
         tmp4=1
     tmp=tmp1*tmp2*tmp3*tmp4
-
+    print(f"{tmp}倍傷害")
     return tmp
+
 def damagecal(attacker,defender):
 
     rate=1

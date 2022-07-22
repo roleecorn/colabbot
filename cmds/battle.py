@@ -6,8 +6,9 @@ import json
 import random
 import sqlite3
 import pandas as pd
-from Module_a.svs import car,battledemo
+# import logging
 
+from Module_a.svs import car,ele2,valuerate,battledemo2
 from Module_a.calaulate import final
 
 
@@ -153,18 +154,25 @@ class game(Cog_extension):
         skill1=skill[waiting]
         skill2=skill[str(ctx.author.id)]
         descripebox=""
-
-        while (pokd['hp']>0 and poka["hp"]>0):
+        # 計算屬性差
+        (elerate1,elerate2)=ele2(pokd,poka)
+        # 計算數值差
+        valuerate1=valuerate(pokd,poka)
+        valuerate2=valuerate(poka,pokd)
+        hpd=pokd['hp']
+        hpa=poka["hp"]
+        while (hpd>0 and hpa>0):
             chooseskill1=random.sample(skill1.keys(),1)
             chooseskill2=random.sample(skill2.keys(),1)
-
-            (pokd,poka,descripe)=battledemo(pokd,poka,pok1name,pok2name,chooseskill1[0],chooseskill2[0])
-        
+            (hpd,hpa,descripe)=battledemo2(hpd,hpa,pokd,poka,chooseskill1[0],chooseskill2[0],elerate1*valuerate1,elerate2*valuerate2)
+            # (pokd,poka,descripe)=battledemo(pokd,poka,pok1name,pok2name,chooseskill1[0],chooseskill2[0])
+            
 
             descripebox=descripebox+descripe+"\n"
         await channel.send(descripebox)
-        
-        if pokd['hp']>0:
+        print(hpd)
+        print(waiting)
+        if hpd>0:
             #waiting勝
             await channel.send(f"{pok1name}  獲得了勝利")
             print(f"winner is {waiting}")

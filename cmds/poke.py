@@ -70,7 +70,18 @@ class poke(Cog_extension):
         embed.add_field(name=skills[0]+skills[1], value=damage[0]+damage[1], inline=False)
         
         embed.add_field(name=skills[2]+skills[3], value=damage[2]+damage[3], inline=False)
-    
+        win_and_lose =sqlite3.connect("/gdrive/My Drive/colabpractice/dcbot/data/win_and_lose.db")
+        qry = f"SELECT * FROM wl where id='{str(ctx.author.id)}'"
+        df = pd.read_sql_query(qry, win_and_lose)
+        win_and_lose.close()
+        embed.add_field(name="持有物", value=chr(173), inline=False)
+        money=changetofull(df["money"][0])
+        exp=changetofull(df["exp"][0])
+        win=changetofull(df["win"][0])
+        lose=changetofull(df["lose"][0])
+        embed.add_field(name="金錢　　　　　ＥＸＰ", value=f"{money}{exp}", inline=False)
+        embed.add_field(name="對戰紀錄", value=chr(173), inline=False)
+        embed.add_field(name="勝場　　　　　敗場", value=f"{win}{lose}", inline=False)
         await ctx.send(embed=embed)
 def setup(bot):
     bot.add_cog(poke(bot))
