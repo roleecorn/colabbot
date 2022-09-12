@@ -111,7 +111,7 @@ def ele2(p1,p2):
         tmp8=1
     tmp=tmp1*tmp2*tmp3*tmp4
     tmpr=tmp5*tmp6*tmp7*tmp8
-    print(f"{tmp}倍傷害")
+    
     return tmp,tmpr
 
 def valuerate(attacker,defender):

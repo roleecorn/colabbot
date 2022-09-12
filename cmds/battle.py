@@ -170,8 +170,7 @@ class game(Cog_extension):
 
             descripebox=descripebox+descripe+"\n"
         await channel.send(descripebox)
-        print(hpd)
-        print(waiting)
+        
         if hpd>0:
             #waiting勝
             await channel.send(f"{pok1name}  獲得了勝利")

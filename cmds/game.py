@@ -14,16 +14,11 @@ class game(Cog_extension):
         if (checkname(name)):
             await ctx.send(checkname(name))
             return
-        
-        # with open(os.path.join("./data/", "pokemon.json"), newline='', encoding='UTF-8') as jsonfile:
-        #     pokemon = json.load(jsonfile)
-        #     jsonfile.close()
-        # if str(ctx.author.id) in pokemon.keys():
-        #     await ctx.send("你已經有一隻寶可夢了，請愛他")
-        #     return
+        id = str(ctx.author.id)
         status = sqlite3.connect("/gdrive/My Drive/colabpractice/dcbot/data/pokemon.db")
-        qry = f"SELECT * FROM pokemon where id='{id}'"
+        qry = f"SELECT * FROM pokemon where id='{id}';"
         df = pd.read_sql_query(qry, status)
+
         if(not df.empty):
             await ctx.send("你已經有一隻寶可夢了，請愛他")
             status.close()
@@ -33,7 +28,6 @@ class game(Cog_extension):
         for i in range(len(tmp)) :
             tmp[i]=tmp[i]+(random.randint(0,20))
         tmp.append(5)
-        # pokemon[str(ctx.author.id)]=[name,tmp]
         element={
         '1':"水",
         '2':"火",
@@ -53,9 +47,7 @@ class game(Cog_extension):
         status.execute(cmd)
         status.commit()
         status.close()
-        # with open(os.path.join("./data/", "pokemon.json"), "w", encoding='UTF-8') as f:
-        #     json.dump(pokemon, f, indent = 4)
-        #     f.close()
+
         with open(os.path.join("./data/", "skill.json"), newline='', encoding='UTF-8') as jsonfile:
             skill = json.load(jsonfile)
             jsonfile.close()

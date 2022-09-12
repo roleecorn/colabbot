@@ -19,7 +19,7 @@ class React(Cog_extension):
             return
         if message.content == "164" :
 
-            await message.channel.send(content=f"https://cdn.discordapp.com/attachments/961186407441903667/961919027469492234/769205024122339388.png \n{message.author.mention}",delete_after=3)
+            await message.channel.send(content=f"https://media.discordapp.net/stickers/901027009570963468.webp?size=120 \n{message.author.mention}",delete_after=3)
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self,data):

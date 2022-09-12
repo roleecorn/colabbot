@@ -51,28 +51,28 @@ class CommandErrorHandler(commands.Cog):
             print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
             traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
 
-    @commands.command(name='repeat', aliases=['mimic', 'copy'])
-    async def do_repeat(self, ctx, *, inp: str):
-        """A simple command which repeats your input!
+    # @commands.command(name='repeat', aliases=['mimic', 'copy'])
+    # async def do_repeat(self, ctx, *, inp: str):
+    #     """A simple command which repeats your input!
 
-        Parameters
-        ------------
-        inp: str
-            The input you wish to repeat.
-        """
-        await ctx.send(inp)
+    #     Parameters
+    #     ------------
+    #     inp: str
+    #         The input you wish to repeat.
+    #     """
+    #     await ctx.send(inp)
 
-    @do_repeat.error
-    async def do_repeat_handler(self, ctx, error):
-        """A local Error Handler for our command do_repeat.
+    # @do_repeat.error
+    # async def do_repeat_handler(self, ctx, error):
+    #     """A local Error Handler for our command do_repeat.
 
-        This will only listen for errors in do_repeat.
-        The global on_command_error will still be invoked after.
-        """
+    #     This will only listen for errors in do_repeat.
+    #     The global on_command_error will still be invoked after.
+    #     """
 
-        if isinstance(error, commands.MissingRequiredArgument):
-            if error.param.name == 'inp':
-                await ctx.send("You forgot to give me input to repeat!")
+    #     if isinstance(error, commands.MissingRequiredArgument):
+    #         if error.param.name == 'inp':
+    #             await ctx.send("You forgot to give me input to repeat!")
 
 
 def setup(bot):
