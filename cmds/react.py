@@ -37,9 +37,9 @@ class React(Cog_extension):
                 role=guild.get_role(cid)
                 if not role :
                     continue
-
+                print(role.name,data.member.name)
                 await data.member.add_roles(role)
-                print("find")
+                
                 cid=738348131724427286
                 role=guild.get_role(cid)
                 await data.member.add_roles(role)

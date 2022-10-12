@@ -15,8 +15,13 @@ class game(Cog_extension):
     
         context="```\n"
         for i in range(10):
-
-            member = await ctx.guild.fetch_member(int(df.iloc[i]["id"]))
+            try:
+                member = await ctx.guild.fetch_member(int(df.iloc[i]["id"]))
+            except:
+                context=context+f"第{i+1}位:noname\n"
+                context=context+f" 勝場:{df.iloc[i]['win']}　"
+                context=context+f" 敗場:{df.iloc[i]['lose']}　\n"
+                continue
             if member.nick==None:
                 context=context+f"第{i+1}位:{str(member.name)}\n"
                 context=context+f" 勝場:{df.iloc[i]['win']}　"

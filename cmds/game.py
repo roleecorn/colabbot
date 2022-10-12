@@ -60,14 +60,14 @@ class game(Cog_extension):
         win_and_lose.execute(cmd)
         win_and_lose.commit()
         win_and_lose.close()
-        with open(os.path.join("./data/", "rank.json"), newline='', encoding='UTF-8') as jsonfile:
-            rank = json.load(jsonfile)
-            jsonfile.close()
-        rank[str(ctx.author.id)]={"win":0, 'lose':0, "排名":11}
+        # with open(os.path.join("./data/", "rank.json"), newline='', encoding='UTF-8') as jsonfile:
+        #     rank = json.load(jsonfile)
+        #     jsonfile.close()
+        # rank[str(ctx.author.id)]={"win":0, 'lose':0, "排名":11}
 
-        with open(os.path.join("./data/", "rank.json"), "w", encoding='UTF-8') as f:
-            json.dump(rank, f, indent = 4)
-            f.close()
+        # with open(os.path.join("./data/", "rank.json"), "w", encoding='UTF-8') as f:
+        #     json.dump(rank, f, indent = 4)
+        #     f.close()
         
         await ctx.send("恭喜，你有了新的寶可夢了")
         await ctx.send(f"他的數值為\n```\n等級：{tmp[6]}\n屬性：{tmp[7]}\nＨＰ：{tmp[0]}\n攻擊：{tmp[1]}\n防禦：{tmp[2]}\n特攻：{tmp[3]}\n特防：{tmp[4]}\n速度：{tmp[5]}\n```")
