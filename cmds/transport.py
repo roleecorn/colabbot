@@ -33,8 +33,8 @@ class transport(Cog_extension):
         tmp=[]
         
         await ctx.send("標記中")
-        least_tall=2000
-        x=2000
+        least_tall=2500
+        x=2500
         while(x<tall):
             flag=check(img,x)
             if flag !=1:
@@ -57,8 +57,10 @@ class transport(Cog_extension):
                 crop_img = img[tmp[i-1]:tmp[i], 0:wide]
                 if tmp[i]-tmp[i-1]>6000:
                     tmp2=tmp2+1
-                
-            cv2.imwrite(f"./picture/{tmp2}.png", crop_img)
+            if tmp2<10:
+                cv2.imwrite(f"./picture/{'0'+str(tmp2)}.png", crop_img)
+            else :
+                cv2.imwrite(f"./picture/{tmp2}.png", crop_img)
             
             tmp2=tmp2+1
         crop_img = img[tmp[i]:tall, 0:wide]
