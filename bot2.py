@@ -64,7 +64,7 @@ async def on_ready():
         type=discord.ActivityType.playing, name='AAstoryboard')
     await bot.change_presence(status=status_w, activity=activity_w)
 
-    logging.warning('目前登入身份：', bot.user)
+    logging.warning(f'目前登入身份： {bot.user}')
 
 
 @bot.event
@@ -79,7 +79,7 @@ for filename in os.listdir('./cmds'):
             bot.load_extension(f'cmds.{filename[:-3]}')
             logging.warning(filename)
         except:
-            logging.warning(f"{filename} error!error!error!error!error!error!error!")
+            logging.warning(f"{filename} error!error!error!error!error!error!")
 if __name__ == "__main__":
 
     # print(botdata["token"])
