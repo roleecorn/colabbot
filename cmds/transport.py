@@ -5,6 +5,7 @@ import os
 from discord import File
 import cv2
 import zipfile
+import logging
 
 def check(img,start):
     (tall,wide)=img.shape
@@ -23,8 +24,8 @@ class transport(Cog_extension):
     async def cut(self,ctx,tmp2:int=1):
         # if ctx.author.id != 534243081135063041:
         #     return  
-        print(str(ctx.author.name))
-        print("cut")
+        logging.info(str(ctx.author.name))
+        logging.info("cut")
         attachment=ctx.message.attachments[0]
         await ctx.send("讀取中")
         await attachment.save(f"./picture/{attachment.filename}")
@@ -48,7 +49,7 @@ class transport(Cog_extension):
         await ctx.send("切割中")
         img = cv2.imread(f"./picture/{attachment.filename}", cv2.IMREAD_COLOR)
         # tmp2=1
-        print(tmp)
+        logging.info(tmp)
         for i in range(len(tmp)):
             if i==0:
                 crop_img = img[0:tmp[i], 0:wide]

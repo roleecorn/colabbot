@@ -6,7 +6,7 @@ import json
 import random
 import sqlite3
 import pandas as pd
-# import logging
+import logging
 
 from Module_a.svs import car,ele2,valuerate,battledemo2
 from Module_a.calaulate import final
@@ -174,13 +174,13 @@ class game(Cog_extension):
         if hpd>0:
             #waiting勝
             await channel.send(f"{pok1name}  獲得了勝利")
-            print(f"winner is {waiting}")
+            logging.info(f"winner is {waiting}")
 
             final(int(waiting),ctx.author.id)
             return
         #ctx.author勝
         await channel.send(f"{pok2name}  獲得了勝利")
-        print(f"winner is {ctx.author.id}")
+        logging.info(f"winner is {ctx.author.id}")
 
         final(ctx.author.id,int(waiting))
         return
