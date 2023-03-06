@@ -5,21 +5,9 @@ import os
 import json
 class React(Cog_extension):
 
-    @commands.Cog.listener()
-    async def on_message(self,message):
-        # message.send("debug")
-        
-        if str(message.channel.type)=="private":
-            return
-        for role in message.author.roles :
-            if "BOT" == str(role):
-                return
-
-        if message.author == self.bot.user:
-            return
-        if message.content == "164" :
-
-            await message.channel.send(content=f"https://media.discordapp.net/stickers/901027009570963468.webp?size=120 \n{message.author.mention}",delete_after=3)
+    # @commands.Cog.listener()
+    # async def on_message(self,message):
+    #     pass
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self,data):

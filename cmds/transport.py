@@ -8,7 +8,7 @@ import zipfile
 
 def check(img,start):
     (tall,wide)=img.shape
-    for i in range(40):
+    for i in range(30):
         for x in range(wide):    
             if i+start==tall:
                 return 1
@@ -16,7 +16,7 @@ def check(img,start):
                 return 1
     # tmp.append(start+25)
 
-    return (start+25)
+    return (start+15)
 class transport(Cog_extension): 
     @commands.command()
     @commands.cooldown(1,120, commands.BucketType.default)
@@ -42,7 +42,9 @@ class transport(Cog_extension):
                 x=x+least_tall
                 continue
             x=x+10
-        
+        if len(tmp)>2:
+            if (tall-tmp[-1])<1200:
+                del tmp[-1]
         await ctx.send("切割中")
         img = cv2.imread(f"./picture/{attachment.filename}", cv2.IMREAD_COLOR)
         # tmp2=1
@@ -64,8 +66,10 @@ class transport(Cog_extension):
             
             tmp2=tmp2+1
         crop_img = img[tmp[i]:tall, 0:wide]
-        
-        cv2.imwrite(f"./picture/{tmp2}.png", crop_img)
+        if tmp2<10:
+            cv2.imwrite(f"./picture/{'0'+str(tmp2)}.png", crop_img)
+        else :
+            cv2.imwrite(f"./picture/{tmp2}.png", crop_img)
         
         zip_fp = zipfile.ZipFile('cutfile.zip', 'w')
         await ctx.send("打包中")
