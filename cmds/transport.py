@@ -27,8 +27,8 @@ class transport(Cog_extension):
     async def cut(self, ctx, tmp2: int = 1):
         # if ctx.author.id != 534243081135063041:
         #     return
-        logging.info(str(ctx.author.name))
-        logging.info("cut")
+        logging.warning(str(ctx.author.name))
+        logging.warning("cut")
         attachment = ctx.message.attachments[0]
         await ctx.send("讀取中")
 
@@ -36,7 +36,7 @@ class transport(Cog_extension):
             os.makedirs('./picture/')
             logging.warning("Directory created!")
         else:
-            logging.info("Directory already exists.")
+            logging.warning("Directory already exists.")
         await attachment.save(f"./picture/{attachment.filename}")
         img = cv2.imread(
             f"./picture/{attachment.filename}", cv2.IMREAD_GRAYSCALE)
@@ -59,7 +59,7 @@ class transport(Cog_extension):
         await ctx.send("切割中")
         img = cv2.imread(f"./picture/{attachment.filename}", cv2.IMREAD_COLOR)
         # tmp2=1
-        logging.info(tmp)
+        logging.warning(tmp)
         for i in range(len(tmp)):
             if i == 0:
                 crop_img = img[0:tmp[i], 0:wide]
@@ -86,7 +86,7 @@ class transport(Cog_extension):
         await ctx.send("打包中")
         os.remove(os.path.join("./picture", attachment.filename))
         cize = 0
-        for filename in os.listdir(f'./picture'):
+        for filename in os.listdir('./picture'):
             cize = cize+os.path.getsize(os.path.join("./picture", filename))
 
             if cize > 7000000:

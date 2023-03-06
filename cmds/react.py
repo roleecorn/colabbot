@@ -24,11 +24,11 @@ class React(Cog_extension):
         if str(data.channel_id) in parrent.keys():
             print("inparrent.keys")
             for cid in parrent[str(data.channel_id)]:
-                logging.info("add")
+                logging.warning("add")
                 role = guild.get_role(cid)
                 if not role:
                     continue
-                logging.info(role.name, data.member.name)
+                logging.warning(role.name, data.member.name)
                 await data.member.add_roles(role)
 
                 cid = 738348131724427286
@@ -41,7 +41,7 @@ class React(Cog_extension):
         if str(data.emoji) == "⬆️":
             guild = self.bot.get_guild(data.guild_id)
             member = await guild.fetch_member(data.user_id)
-            logging.info(member)
+            logging.warning(member)
             with open(os.path.join("./data/", "output.json"), newline='') as jsonfile:
                 parrent = json.load(jsonfile)
                 jsonfile.close()

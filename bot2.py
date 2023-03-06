@@ -12,7 +12,7 @@ parser.add_argument("--token", help="bots token",
                     type=str)
 args = parser.parse_args()
 formatter = '%(levelname)s %(asctime)s %(message)s'
-# logging.basicConfig(filename="bot.log",  level=logging.INFO,format=formatter, datefmt='%m/%d/%Y %I:%M:%S %p')
+# logging.basicConfig(filename="bot.log",  level=logging.warning,format=formatter, datefmt='%m/%d/%Y %I:%M:%S %p')
 # # bot = discord.Client()
 # log= logging.Logger(name='bot.log', level='INFO')
 
@@ -26,7 +26,7 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
 
 PORT = int(os.environ.get('PORT', 8000))
 print(PORT)
-logging.info(f"PORT={PORT}")
+logging.warning(f"PORT={PORT}")
 handler = MyHandler
 httpd = socketserver.TCPServer(("", PORT), handler)
 
@@ -64,7 +64,7 @@ async def on_ready():
         type=discord.ActivityType.playing, name='AAstoryboard')
     await bot.change_presence(status=status_w, activity=activity_w)
 
-    logging.info('目前登入身份：', bot.user)
+    logging.warning('目前登入身份：', bot.user)
 
 
 @bot.event
@@ -77,7 +77,7 @@ for filename in os.listdir('./cmds'):
     if filename.endswith('.py'):
         try:
             bot.load_extension(f'cmds.{filename[:-3]}')
-            logging.info(filename)
+            logging.warning(filename)
         except:
             logging.warning(f"{filename} error!error!error!error!error!error!error!")
 if __name__ == "__main__":

@@ -174,13 +174,13 @@ class game(Cog_extension):
         if hpd>0:
             #waiting勝
             await channel.send(f"{pok1name}  獲得了勝利")
-            logging.info(f"winner is {waiting}")
+            logging.warning(f"winner is {waiting}")
 
             final(int(waiting),ctx.author.id)
             return
         #ctx.author勝
         await channel.send(f"{pok2name}  獲得了勝利")
-        logging.info(f"winner is {ctx.author.id}")
+        logging.warning(f"winner is {ctx.author.id}")
 
         final(ctx.author.id,int(waiting))
         return

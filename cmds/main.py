@@ -17,7 +17,7 @@ class Main(Cog_extension):
 
     @commands.command()
     async def setrole(self, ctx, channelid: int, roleid: int):
-        logging.info("setrole")
+        logging.warning("setrole")
         flag = 0
         # 確認admin身分
         for role in ctx.author.roles:
