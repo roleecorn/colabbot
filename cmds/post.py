@@ -124,6 +124,7 @@ class post(Cog_extension):
             return
         today = datetime.date.today()
         os.system(f"git commit -a -m update_{today}")
+        os.system('git push -u origin reset_filepath')
         return
 
     @commands.command()
