@@ -4,6 +4,12 @@ from discord.ext import commands
 from core.classes import Cog_extension
 import json
 import logging
+
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("--token", help="bots token",
+                    type=str)
+args = parser.parse_args()
 formatter='%(levelname)s %(asctime)s %(message)s'
 # logging.basicConfig(filename="bot.log",  level=logging.INFO,format=formatter, datefmt='%m/%d/%Y %I:%M:%S %p')
 # # bot = discord.Client()
@@ -51,11 +57,9 @@ for filename in os.listdir('./cmds'):
         except:
             print(f"{filename} error!error!error!error!error!error!error!")
 if __name__=="__main__":
-    with open(os.path.join(".", "botdata.json"), newline='', encoding='UTF-8') as jsonfile:
-        botdata = json.load(jsonfile)
-        jsonfile.close()
+
     # print(botdata["token"])
     logging.warning('Start the bot')
-    token=botdata["token"]
+    token=args.token
 
     bot.run(token)
