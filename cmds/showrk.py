@@ -8,7 +8,7 @@ class game(Cog_extension):
     @commands.command()
     async def rank(self,ctx):
 
-        win_and_lose =sqlite3.connect("/gdrive/My Drive/colabpractice/dcbot/data/win_and_lose.db")
+        win_and_lose =sqlite3.connect("./data/win_and_lose.db")
         qry = f"SELECT id,win,lose FROM wl order by win DESC limit 10"
         df = pd.read_sql_query(qry, win_and_lose)
         win_and_lose.close()

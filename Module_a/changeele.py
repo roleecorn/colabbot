@@ -2,7 +2,7 @@ import sqlite3
 import random
 import pandas as pd
 def changeele(id):
-    win_and_lose =sqlite3.connect("/gdrive/My Drive/colabpractice/dcbot/data/win_and_lose.db")
+    win_and_lose =sqlite3.connect("./data/win_and_lose.db")
     qry = f"SELECT * FROM wl where id={id} "
     df = pd.read_sql_query(qry, win_and_lose)
     if df.empty:
@@ -22,7 +22,7 @@ def changeele(id):
         afele2=eles[random.randint(0,len(eles)-1)]
     else :
         afele2=""
-    status = sqlite3.connect("/gdrive/My Drive/colabpractice/dcbot/data/pokemon.db")
+    status = sqlite3.connect("./data/pokemon.db")
     qry = f"SELECT * FROM pokemon where id='{id}'"
     df = pd.read_sql_query(qry, status)
     cmd=f"update pokemon set typea='{afele1}'  where id={id};"

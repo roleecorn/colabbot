@@ -83,7 +83,7 @@ class game(Cog_extension):
             return
         #確認是否連線正常
         try:
-            status = sqlite3.connect("/gdrive/My Drive/colabpractice/dcbot/data/pokemon.db")
+            status = sqlite3.connect("./data/pokemon.db")
             qry = f"SELECT * FROM pokemon where id={ctx.author.id} "
             
             dfa = pd.read_sql_query(qry, status)

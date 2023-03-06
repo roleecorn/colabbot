@@ -11,7 +11,7 @@ def final(winer:int,loser:int):
     #給敗者加1敗
 
 
-    win_and_lose =sqlite3.connect("/gdrive/My Drive/colabpractice/dcbot/data/win_and_lose.db")
+    win_and_lose =sqlite3.connect("./data/win_and_lose.db")
 
     qry = f"SELECT * FROM wl where id={winer} "
     df = pd.read_sql_query(qry, win_and_lose)

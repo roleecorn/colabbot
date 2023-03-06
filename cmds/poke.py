@@ -23,7 +23,7 @@ class poke(Cog_extension):
     
     @commands.command()
     async def mypokemon(self,ctx):
-        status = sqlite3.connect("/gdrive/My Drive/colabpractice/dcbot/data/pokemon.db")
+        status = sqlite3.connect("./data/pokemon.db")
         qry = f"SELECT * FROM pokemon where id='{str(ctx.author.id)}'"
         df = pd.read_sql_query(qry, status)
         status.close()
@@ -70,7 +70,7 @@ class poke(Cog_extension):
         embed.add_field(name=skills[0]+skills[1], value=damage[0]+damage[1], inline=False)
         
         embed.add_field(name=skills[2]+skills[3], value=damage[2]+damage[3], inline=False)
-        win_and_lose =sqlite3.connect("/gdrive/My Drive/colabpractice/dcbot/data/win_and_lose.db")
+        win_and_lose =sqlite3.connect("./data/win_and_lose.db")
         qry = f"SELECT * FROM wl where id='{str(ctx.author.id)}'"
         df = pd.read_sql_query(qry, win_and_lose)
         win_and_lose.close()

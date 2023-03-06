@@ -15,7 +15,7 @@ class game(Cog_extension):
             await ctx.send(checkname(name))
             return
         id = str(ctx.author.id)
-        status = sqlite3.connect("/gdrive/My Drive/colabpractice/dcbot/data/pokemon.db")
+        status = sqlite3.connect("./data/pokemon.db")
         qry = f"SELECT * FROM pokemon where id='{id}';"
         df = pd.read_sql_query(qry, status)
 
@@ -55,7 +55,7 @@ class game(Cog_extension):
         with open(os.path.join("./data/", "skill.json"), "w", encoding='UTF-8') as f:
             json.dump(skill, f, indent = 4)
             f.close()
-        win_and_lose =sqlite3.connect("/gdrive/My Drive/colabpractice/dcbot/data/win_and_lose.db")
+        win_and_lose =sqlite3.connect("./data/win_and_lose.db")
         cmd = "insert into wl(id,win,lose,money,exp) values('{}','{}','{}','{}','{}')".format(str(ctx.author.id),0,0,0,0)
         win_and_lose.execute(cmd)
         win_and_lose.commit()
@@ -76,7 +76,7 @@ class game(Cog_extension):
     @commands.command()
     async def pokemonset(self,ctx,mode,arg1="none",arg2="none"):
 
-        status = sqlite3.connect("/gdrive/My Drive/colabpractice/dcbot/data/pokemon.db")
+        status = sqlite3.connect("./data/pokemon.db")
         qry = f"SELECT * FROM pokemon where id='{str(ctx.author.id)}'"
         df = pd.read_sql_query(qry, status)
         if(df.empty):
@@ -97,7 +97,7 @@ class game(Cog_extension):
 
 
             tmp=df.iloc[0]['name']
-            status = sqlite3.connect("/gdrive/My Drive/colabpractice/dcbot/data/pokemon.db")
+            status = sqlite3.connect("./data/pokemon.db")
             cmd=f"update pokemon set name='{arg1}' where id={str(ctx.author.id)};"
             status.execute(cmd)
             status.commit()
