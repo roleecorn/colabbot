@@ -4,6 +4,7 @@ from core.classes import Cog_extension
 import os
 import json
 from discord import File
+import zipfile
 import random
 import datetime
 # from disnake import AllowedMentions
@@ -119,13 +120,21 @@ class post(Cog_extension):
         await ctx.message.delete()
 
     @commands.command()
-    async def git_upload(self, ctx):
+    async def data_upload(self, ctx):
         if ctx.author.id != 534243081135063041:
             return
-        today = datetime.date.today()
-        os.system(f"git commit -a -m update_{today}")
-        os.system('git push -u origin reset_filepath')
-        return
+        zip_fp = zipfile.ZipFile('data.zip', 'w')
+        await ctx.send("打包中")
+        for filename in os.listdir('./data'):
+
+            zip_fp = zipfile.ZipFile('data.zip', 'w')
+
+            zip_fp.write(os.path.join("./data", filename))
+
+            os.remove(os.path.join("./data", filename))
+
+        zip_fp.close()
+        await ctx.send(file=discord.File("data.zip"))
 
     @commands.command()
     @commands.has_permissions(change_nickname=True)
