@@ -131,10 +131,9 @@ class post(Cog_extension):
 
             zip_fp.write(os.path.join("./data", filename))
 
-            os.remove(os.path.join("./data", filename))
-
         zip_fp.close()
         await ctx.send(file=discord.File("data.zip"))
+        os.remove('data.zip')
 
     @commands.command()
     @commands.has_permissions(change_nickname=True)
