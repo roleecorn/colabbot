@@ -1,0 +1,5 @@
+botdata.json
+corn.py
+*.zip
+*.ipynb
+__pycache__/
