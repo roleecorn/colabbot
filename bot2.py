@@ -4,8 +4,8 @@ from discord.ext import commands
 from core.classes import Cog_extension
 import json
 import logging
-import http.server
-import socketserver
+# import http.server
+# import socketserver
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--token", help="bots token",
@@ -17,18 +17,18 @@ formatter = '%(levelname)s %(asctime)s %(message)s'
 # log= logging.Logger(name='bot.log', level='INFO')
 
 
-class MyHandler(http.server.SimpleHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b'Hello, HTTP!')
+# class MyHandler(http.server.SimpleHTTPRequestHandler):
+#     def do_GET(self):
+#         self.send_response(200)
+#         self.end_headers()
+#         self.wfile.write(b'Hello, HTTP!')
 
 
-PORT = int(os.environ.get('PORT', 8000))
-print(PORT)
-logging.warning(f"PORT={PORT}")
-handler = MyHandler
-httpd = socketserver.TCPServer(("", PORT), handler)
+# PORT = int(os.environ.get('PORT', 8000))
+# print(PORT)
+# logging.warning(f"PORT={PORT}")
+# handler = MyHandler
+# httpd = socketserver.TCPServer(("", PORT), handler)
 
 intents = discord.Intents.default()
 intents.members = True

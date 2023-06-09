@@ -28,7 +28,7 @@ class React(Cog_extension):
                 role = guild.get_role(cid)
                 if not role:
                     continue
-                logging.warning(role.name, data.member.name)
+                logging.warning(f'{role.name}, {data.member.name}')
                 await data.member.add_roles(role)
 
                 cid = 738348131724427286
