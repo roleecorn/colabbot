@@ -1,4 +1,3 @@
-import discord
 from discord.ext import commands
 from core.classes import Cog_extension
 from Module_a.changeele import changeele

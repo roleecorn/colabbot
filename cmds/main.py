@@ -1,9 +1,7 @@
-import discord
 from discord.ext import commands
 from core.classes import Cog_extension
 import os
 import json
-from discord import File
 import random
 import logging
 
@@ -29,7 +27,8 @@ class Main(Cog_extension):
         ####
         # json作法
         ####
-        with open(os.path.join("./data/", "output.json"), newline='') as jsonfile:
+        with open(os.path.join("./data/", "output.json"),
+                  newline='') as jsonfile:
             parrent = json.load(jsonfile)
             jsonfile.close()
         channelid = str(channelid)
@@ -64,7 +63,8 @@ class Main(Cog_extension):
         if flag == 0:
             await ctx.send("not admin")
             return
-        with open(os.path.join("./data/", "output.json"), newline='') as jsonfile:
+        with open(os.path.join("./data/", "output.json"),
+                  newline='') as jsonfile:
             parrent = json.load(jsonfile)
             jsonfile.close()
         channelid = str(channelid)
@@ -87,7 +87,8 @@ class Main(Cog_extension):
 
     @commands.command()
     async def showrole(self, ctx):
-        with open(os.path.join("./data/", "output.json"), newline='') as jsonfile:
+        with open(os.path.join("./data/", "output.json"),
+                  newline='') as jsonfile:
             parrent = json.load(jsonfile)
             jsonfile.close()
         guild = ctx.guild

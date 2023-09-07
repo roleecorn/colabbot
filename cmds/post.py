@@ -2,11 +2,8 @@ import discord
 from discord.ext import commands
 from core.classes import Cog_extension
 import os
-import json
-from discord import File
 import zipfile
-import random
-import datetime
+
 # from disnake import AllowedMentions
 
 
@@ -28,22 +25,22 @@ class post(Cog_extension):
         try:
             channelid = int(arg[-1])
             channel = guild.get_channel(channelid)
-        except:
+        except Exception:
             channel = None
 
-        if channel != None:
+        if channel:
             flag = True
-        if channel == None:
+        if not channel:
             channel = guild.get_channel(739739523130327040)
             flag = False
-        message = None
 
-        allowed_mention = discord.AllowedMentions(
-            users=False,         # Whether to ping individual user @mentions
-            everyone=False,      # Whether to ping @everyone or @here mentions
-            roles=False,         # Whether to ping role @mentions
-            replied_user=False    # Whether to ping on replies to messages
-        )
+        # allowed_mention = discord.AllowedMentions(
+        #     users=False,         # Whether to ping individual user @mentions
+        #     everyone=False,      
+        # # Whether to ping @everyone or @here mentions
+        #     roles=False,         # Whether to ping role @mentions
+        #     replied_user=False    # Whether to ping on replies to messages
+        # )
         if len(arg) > 0:
             tmp = " "
             if flag:

@@ -1,4 +1,3 @@
-import discord
 from discord.ext import commands
 from core.classes import Cog_extension
 import os
@@ -45,17 +44,38 @@ class game(Cog_extension):
         spatk = tmp[3]
         spdef = tmp[4]
 
-        cmd = "insert into pokemon(id	,name,typea,typeb,level,hp,	speed,	atk,	def,	spatk,	spdef) values('{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}')".format(
-            str(ctx.author.id), name, atype, btype, level, hp, speed, atk, defv, spatk, spdef)
+        cmd = (
+            "insert into pokemon("
+            "id, name, typea, typeb, level, hp, speed, atk, def, spatk, spdef"
+            ") values("
+            "'{user_id}', '{name}', '{atype}', '{btype}', '{level}', "
+            "'{hp}', '{speed}', '{atk}', '{defv}', '{spatk}', '{spdef}'"
+            ")"
+        ).format(
+            user_id=str(ctx.author.id),
+            name=name,
+            atype=atype,
+            btype=btype,
+            level=level,
+            hp=hp,
+            speed=speed,
+            atk=atk,
+            defv=defv,
+            spatk=spatk,
+            spdef=spdef
+        )
+
         status.execute(cmd)
         status.commit()
         status.close()
 
-        with open(os.path.join("./data/", "skill.json"), newline='', encoding='UTF-8') as jsonfile:
+        with open(os.path.join("./data/", "skill.json"), newline='',
+                  encoding='UTF-8') as jsonfile:
             skill = json.load(jsonfile)
             jsonfile.close()
         skill[str(ctx.author.id)] = {"衝擊": 0, "高速星星": 0, "居合斬": 0, "連環巴掌": 0}
-        with open(os.path.join("./data/", "skill.json"), "w", encoding='UTF-8') as f:
+        with open(os.path.join("./data/", "skill.json"), "w",
+                  encoding='UTF-8') as f:
             json.dump(skill, f, indent=4)
             f.close()
         win_and_lose = sqlite3.connect("./data/win_and_lose.db")
@@ -64,17 +84,23 @@ class game(Cog_extension):
         win_and_lose.execute(cmd)
         win_and_lose.commit()
         win_and_lose.close()
-        # with open(os.path.join("./data/", "rank.json"), newline='', encoding='UTF-8') as jsonfile:
-        #     rank = json.load(jsonfile)
-        #     jsonfile.close()
-        # rank[str(ctx.author.id)]={"win":0, 'lose':0, "排名":11}
-
-        # with open(os.path.join("./data/", "rank.json"), "w", encoding='UTF-8') as f:
-        #     json.dump(rank, f, indent = 4)
-        #     f.close()
 
         await ctx.send("恭喜，你有了新的寶可夢了")
-        await ctx.send(f"他的數值為\n```\n等級：{tmp[6]}\n屬性：{tmp[7]}\nＨＰ：{tmp[0]}\n攻擊：{tmp[1]}\n防禦：{tmp[2]}\n特攻：{tmp[3]}\n特防：{tmp[4]}\n速度：{tmp[5]}\n```")
+        message = (
+            "他的數值為\n"
+            "```\n"
+            "等級：{}\n"
+            "屬性：{}\n"
+            "ＨＰ：{}\n"
+            "攻擊：{}\n"
+            "防禦：{}\n"
+            "特攻：{}\n"
+            "特防：{}\n"
+            "速度：{}\n"
+            "```"
+        ).format(tmp[6], tmp[7], tmp[0], tmp[1], tmp[2], tmp[3], tmp[4], tmp[5])
+
+        await ctx.send(message)
 
     @commands.command()
     async def pokemonset(self, ctx, mode, arg1="none", arg2="none"):
@@ -113,7 +139,8 @@ class game(Cog_extension):
             if (len(arg2) > 6):
                 await ctx.send("技能名稱太長了")
                 return
-            with open(os.path.join("./data/", "skill.json"), newline='', encoding='UTF-8') as jsonfile:
+            with open(os.path.join("./data/", "skill.json"), newline='',
+                      encoding='UTF-8') as jsonfile:
                 skill = json.load(jsonfile)
                 jsonfile.close()
             if arg1 not in skill[str(ctx.author.id)].keys():
@@ -126,22 +153,25 @@ class game(Cog_extension):
             del skill[str(ctx.author.id)][arg1]
             skill[str(ctx.author.id)][arg2] = tmp
             print(skill[str(ctx.author.id)])
-            with open(os.path.join("./data/", "skill.json"), "w", encoding='UTF-8') as f:
+            with open(os.path.join("./data/", "skill.json"), "w",
+                      encoding='UTF-8') as f:
                 json.dump(skill, f, indent=4)
                 f.close()
             await ctx.send(f"忘記了{arg1}後學會了{arg2}")
             return
         if mode == "stamp":
             if not (arg1):
-                await ctx.send(f"請輸入圖片位置")
+                await ctx.send("請輸入圖片位置")
                 return
-            with open(os.path.join("./data/", "stamp.json"), newline='', encoding='UTF-8') as jsonfile:
+            with open(os.path.join("./data/", "stamp.json"), newline='',
+                      encoding='UTF-8') as jsonfile:
                 stamp = json.load(jsonfile)
                 jsonfile.close()
 
             stamp[str(ctx.author.id)] = str(ctx.message.attachments[0])
 
-            with open(os.path.join("./data/", "stamp.json"), "w", encoding='UTF-8') as f:
+            with open(os.path.join("./data/", "stamp.json"), "w",
+                      encoding='UTF-8') as f:
                 json.dump(stamp, f, indent=4)
                 f.close()
             await ctx.send("新增了照片")

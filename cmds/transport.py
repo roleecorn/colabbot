@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 from core.classes import Cog_extension
 import os
-from discord import File
 import cv2
 import zipfile
 import logging

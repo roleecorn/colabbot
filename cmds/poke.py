@@ -38,14 +38,16 @@ class poke(Cog_extension):
             await ctx.send("你還沒有領取寶可夢喔\n領取寶可夢方法:\n&&create 你的寶可夢的名字")
             return
 
-        with open(os.path.join("./data/", "skill.json"), newline='', encoding='UTF-8') as jsonfile:
+        with open(os.path.join("./data/", "skill.json"), newline='',
+                  encoding='UTF-8') as jsonfile:
             skill = json.load(jsonfile)
             jsonfile.close()
         skills = list(skill[str(ctx.author.id)].keys())
         damage = []
         for i in range(len(skills)):
             damage.append(skill[str(ctx.author.id)][skills[i]])
-        with open(os.path.join("./data/", "stamp.json"), newline='', encoding='UTF-8') as jsonfile:
+        with open(os.path.join("./data/", "stamp.json"), newline='',
+                  encoding='UTF-8') as jsonfile:
             stamp = json.load(jsonfile)
             jsonfile.close()
 
