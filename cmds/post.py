@@ -126,9 +126,6 @@ class post(Cog_extension):
         zip_fp = zipfile.ZipFile('data.zip', 'w')
         await ctx.send("打包中")
         for filename in os.listdir('./data'):
-
-            zip_fp = zipfile.ZipFile('data.zip', 'w')
-
             zip_fp.write(os.path.join("./data", filename))
 
         zip_fp.close()
