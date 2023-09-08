@@ -1,4 +1,3 @@
-import discord
 from discord.ext import commands
 from core.classes import Cog_extension
 from Module_a.changeele import changeele
@@ -27,5 +26,5 @@ class shop(Cog_extension):
         return
 
 
-def setup(bot):
-    bot.add_cog(shop(bot))
+async def setup(bot):
+    await bot.add_cog(shop(bot))

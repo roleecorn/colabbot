@@ -1,4 +1,3 @@
-import discord
 from discord.ext import commands
 from core.classes import Cog_extension
 import os
@@ -18,7 +17,8 @@ class React(Cog_extension):
         if str(data.emoji) != "⬆️":
             return
         guild = self.bot.get_guild(data.guild_id)
-        with open(os.path.join("./data/", "output.json"), newline='') as jsonfile:
+        with open(os.path.join("./data/", "output.json"),
+                  newline='') as jsonfile:
             parrent = json.load(jsonfile)
             jsonfile.close()
         if str(data.channel_id) in parrent.keys():
@@ -42,7 +42,8 @@ class React(Cog_extension):
             guild = self.bot.get_guild(data.guild_id)
             member = await guild.fetch_member(data.user_id)
             logging.warning(member)
-            with open(os.path.join("./data/", "output.json"), newline='') as jsonfile:
+            with open(os.path.join("./data/", "output.json"),
+                      newline='') as jsonfile:
                 parrent = json.load(jsonfile)
                 jsonfile.close()
             if str(data.channel_id) in parrent.keys():
@@ -53,5 +54,5 @@ class React(Cog_extension):
                     await member.remove_roles(role)
 
 
-def setup(bot):
-    bot.add_cog(React(bot))
+async def setup(bot):
+    await bot.add_cog(React(bot))

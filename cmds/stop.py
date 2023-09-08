@@ -1,4 +1,3 @@
-import discord
 from discord.ext import commands
 from core.classes import Cog_extension
 import sys
@@ -21,5 +20,5 @@ class stop(Cog_extension):
         sys.exit()
 
 
-def setup(bot):
-    bot.add_cog(stop(bot))
+async def setup(bot):
+    await bot.add_cog(stop(bot))

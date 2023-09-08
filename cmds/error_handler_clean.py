@@ -11,7 +11,8 @@ class CommandErrorHandler(commands.Cog):
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
-        """The event triggered when an error is raised while invoking a command.
+        """
+        The event triggered when an error is raised while invoking a command.
 
         Parameters
         ------------
@@ -75,5 +76,5 @@ class CommandErrorHandler(commands.Cog):
     #             await ctx.send("You forgot to give me input to repeat!")
 
 
-def setup(bot):
-    bot.add_cog(CommandErrorHandler(bot))
+async def setup(bot):
+    await bot.add_cog(CommandErrorHandler(bot))
