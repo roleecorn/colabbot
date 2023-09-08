@@ -26,5 +26,5 @@ class shop(Cog_extension):
         return
 
 
-def setup(bot):
-    bot.add_cog(shop(bot))
+async def setup(bot):
+    await bot.add_cog(shop(bot))

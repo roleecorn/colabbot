@@ -160,5 +160,5 @@ class Main(Cog_extension):
         return
 
 
-def setup(bot):
-    bot.add_cog(Main(bot))
+async def setup(bot):
+    await bot.add_cog(Main(bot))

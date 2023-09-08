@@ -29,5 +29,5 @@ showrole 可以顯示伺服器中的全部綁定關係\n```"""
         return
 
 
-def setup(bot):
-    bot.add_cog(help(bot))
+async def setup(bot):
+    await bot.add_cog(help(bot))

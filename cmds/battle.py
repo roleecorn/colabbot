@@ -11,7 +11,7 @@ from Module_a.svs import car, ele2, valuerate, battledemo2
 from Module_a.calaulate import final
 
 
-class game(Cog_extension):
+class battle(Cog_extension):
     @commands.command()
     @commands.cooldown(3, 1200, commands.BucketType.user)
     async def duel(self, ctx):
@@ -132,5 +132,5 @@ class game(Cog_extension):
         return
 
 
-def setup(bot):
-    bot.add_cog(game(bot))
+async def setup(bot):
+    await bot.add_cog(battle(bot))

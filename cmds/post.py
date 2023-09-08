@@ -175,5 +175,5 @@ class post(Cog_extension):
         print(guild.banner_url)
 
 
-def setup(bot):
-    bot.add_cog(post(bot))
+async def setup(bot):
+    await bot.add_cog(post(bot))

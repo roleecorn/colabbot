@@ -2,7 +2,8 @@ import discord
 import os
 from discord.ext import commands
 from core.classes import Cog_extension
-import json
+import asyncio
+
 import logging
 # import http.server
 # import socketserver
@@ -30,7 +31,7 @@ formatter = '%(levelname)s %(asctime)s %(message)s'
 # handler = MyHandler
 # httpd = socketserver.TCPServer(("", PORT), handler)
 
-intents = discord.Intents.default()
+intents = discord.Intents.all()
 intents.members = True
 bot = commands.Bot(intents=intents, command_prefix='&&', help_command=None)
 # bot = commands.Bot(intents=intents,command_prefix='&&')
@@ -39,21 +40,21 @@ bot = commands.Bot(intents=intents, command_prefix='&&', help_command=None)
 @bot.command()
 async def load(ctx, extension):
     if ctx.author.id == 534243081135063041:
-        bot.load_extension(f'cmds.{extension}')
+        await bot.load_extension(f'cmds.{extension}')
         await ctx.send(f'load {extension}')
 
 
 @bot.command()
 async def reload(ctx, extension):
     if ctx.author.id == 534243081135063041:
-        bot.reload_extension(f'cmds.{extension}')
+        await bot.reload_extension(f'cmds.{extension}')
         await ctx.send(f'reload {extension}')
 
 
 @bot.command()
 async def unload(ctx, extension):
     if ctx.author.id == 534243081135063041:
-        bot.unload_extension(f'cmds.{extension}')
+        await bot.unload_extension(f'cmds.{extension}')
         await ctx.send(f'unload {extension}')
 
 
@@ -73,17 +74,28 @@ async def on_command_error(ctx, error):
         await ctx.send("說了不要狂刷指令吧?")
 
 
-for filename in os.listdir('./cmds'):
-    if filename.endswith('.py'):
-        try:
-            bot.load_extension(f'cmds.{filename[:-3]}')
-            logging.warning(filename)
-        except:
-            logging.warning(f"{filename} error!error!error!error!error!error!")
+async def load_async(bot,filename):
+    await bot.load_extension(f'cmds.{filename[:-3]}')
+
+
+async def load_extensions():
+    for filename in os.listdir('./cmds'):
+        if filename.endswith('.py'):
+            try:
+                await bot.load_extension(f'cmds.{filename[:-3]}')
+                # load_async(bot=bot,filename=filename)
+                logging.info(filename)
+            except Exception as e:
+                logging.warning(f"{filename} error!{e}")
 if __name__ == "__main__":
 
     # print(botdata["token"])
     logging.warning('Start the bot')
     token = args.token
 
-    bot.run(token)
+    # bot.run(token)
+    async def bot_start():
+        async with bot:
+            await load_extensions()
+            await bot.start(token)
+    asyncio.run(bot_start())

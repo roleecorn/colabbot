@@ -107,5 +107,5 @@ class transport(Cog_extension):
         await ctx.send("完成")
 
 
-def setup(bot):
-    bot.add_cog(transport(bot))
+async def setup(bot):
+    await bot.add_cog(transport(bot))

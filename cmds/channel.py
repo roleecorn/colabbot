@@ -94,5 +94,5 @@ class channels(Cog_extension):
         # await guild.create_voice_channel(name=chname)
 
 
-def setup(bot):
-    bot.add_cog(channels(bot))
+async def setup(bot):
+    await bot.add_cog(channels(bot))

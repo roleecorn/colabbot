@@ -54,5 +54,5 @@ class React(Cog_extension):
                     await member.remove_roles(role)
 
 
-def setup(bot):
-    bot.add_cog(React(bot))
+async def setup(bot):
+    await bot.add_cog(React(bot))

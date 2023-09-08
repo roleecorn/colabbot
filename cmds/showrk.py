@@ -4,7 +4,7 @@ import sqlite3
 import pandas as pd
 
 
-class game(Cog_extension):
+class showrk(Cog_extension):
     @commands.command()
     async def rank(self, ctx):
 
@@ -34,5 +34,5 @@ class game(Cog_extension):
         await ctx.send(context)
 
 
-def setup(bot):
-    bot.add_cog(game(bot))
+async def setup(bot):
+    await bot.add_cog(showrk(bot))
