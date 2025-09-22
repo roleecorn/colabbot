@@ -4,7 +4,7 @@ from discord.ext import commands
 from Module_a.unzip import extract_archive
 import shutil
 from core.classes import Cog_extension
-
+import push2Git
 class event(Cog_extension):
     def __init__(self, bot):
         self.bot = bot
@@ -180,6 +180,12 @@ class event(Cog_extension):
                     await ctx.send(f"❌ 建立目錄失敗：{e}")
             else:
                 await ctx.send("⚠️ 未找到可辨識的 HTML 或圖片檔案")
+                return
+            success, msg = push2Git.git_commit_and_push(
+                f"./{self.eventName}",
+                f"Upload作品 {title} by {ctx.author.name}"
+            )
+            await ctx.send(msg)
         except Exception as e:
             await ctx.send(f"❌ 解壓縮失敗：{e}")
             return
