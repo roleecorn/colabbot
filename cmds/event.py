@@ -6,6 +6,11 @@ import shutil
 from core.classes import Cog_extension
 import push2Git
 import aiohttp
+import hashlib
+
+def hash_user_id(user_id: str) -> str:
+    # 使用 SHA256 取前 8 位當資料夾名稱
+    return hashlib.sha256(user_id.encode("utf-8")).hexdigest()[:8]
 class event(Cog_extension):
     def __init__(self, bot):
         self.bot = bot
@@ -166,7 +171,7 @@ class event(Cog_extension):
     async def Upload(self, ctx, title:str ="TBD"):
         """接收一個壓縮檔，下載並解壓縮"""
         user_id = str(ctx.author.id)
-        folderName = user_id #等之後確認是否要hash以避免有人提前看到頁面
+        folderName = hash_user_id(user_id + self.eventName)
         if self.isNewParticipant(user_id):
             await ctx.send(f"⚠️ 你還未報名！ 輸入`&&event 參加`")
             return
