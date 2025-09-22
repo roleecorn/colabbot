@@ -5,20 +5,31 @@ from Module_a.unzip import extract_archive
 import shutil
 from core.classes import Cog_extension
 import push2Git
+import aiohttp
 class event(Cog_extension):
     def __init__(self, bot):
         self.bot = bot
-        self.data_file = os.path.join("./data/", "eventInfo.json")
         self.upload_dir = "./uploads"       # 暫存壓縮檔
         os.makedirs(self.upload_dir, exist_ok=True)
         self.participants = []
-        self.eventName = "TBD"
-
-        if os.path.exists(self.data_file):
-            with open(self.data_file, "r", encoding="UTF-8") as f:
+        self.recent_event_file = os.path.join("./data/", "RecentEvent.txt")
+        if os.path.exists(self.recent_event_file):
+            with open(self.recent_event_file, "r", encoding="utf-8") as f:
+                name = f.read().strip()
+                if name:
+                    self.eventName =name
+                    self.loadData()
+        else:
+            self.eventName = "TBD"
+    def loadData(self):
+        data_file = os.path.join(f"./{self.eventName}/", "eventInfo.json")
+        if os.path.exists(data_file):
+            with open(data_file, "r", encoding="UTF-8") as f:
                 eventInfo = json.load(f)
                 self.participants = eventInfo.get("participants", [])
                 self.eventName = eventInfo.get("eventName", "TBD")
+            return True
+        return False
     def isNewParticipant(self, user_id: str) -> bool:
         """檢查 user_id 是否尚未登記"""
         if not self.participants:
@@ -63,7 +74,8 @@ class event(Cog_extension):
         }
         if extra:
             eventInfo.update(extra)  # 允許額外附加欄位（例如 lastUpload）
-        with open(self.data_file, "w", encoding="UTF-8") as f:
+        data_file = os.path.join(f"./{self.eventName}/", "eventInfo.json")
+        with open(data_file, "w", encoding="UTF-8") as f:
             json.dump(eventInfo, f, ensure_ascii=False, indent=2)
 
     @commands.command()
@@ -80,7 +92,10 @@ class event(Cog_extension):
             await ctx.send(f"❌ 資料夾 `{strEventName}` 不存在，請聯繫開發者或維護者。")
             return
         self.eventName = strEventName
-        self.save_event_info()
+        self.loadData()
+        os.makedirs(os.path.dirname(self.recent_event_file), exist_ok=True)
+        with open(self.recent_event_file, "w", encoding="utf-8") as f:
+            f.write(self.eventName)
         await ctx.send(f"✅ 已更新活動名稱`{self.eventName}`")
         return
     @commands.command()
@@ -109,9 +124,20 @@ class event(Cog_extension):
                 "id": user_id,
                 "name": ctx.author.name,
             })
+            # === 下載頭像到 images/players ===
+            img_dir = os.path.join(self.eventName, "images", "players")
+            os.makedirs(img_dir, exist_ok=True)   # 沒有資料夾就建立
 
+            avatar_url = ctx.author.avatar.with_size(128).url if ctx.author.avatar else ctx.author.default_avatar.with_size(128).url
+            img_path = os.path.join(img_dir, f"{new_uid}.png")
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(avatar_url) as resp:
+                    if resp.status == 200:
+                        with open(img_path, "wb") as f:
+                            f.write(await resp.read())
             self.save_event_info()
-            await ctx.send(f"✅ <@{user_id}> 已報名成功，分配編號：`{new_uid}`")
+            await ctx.send(f"✅ <@{user_id}> 已報名{self.eventName}成功，分配編號：`{new_uid}`")
 
         # === 退賽 ===
         elif action.lower() in ["leave", "remove", "quit", "退賽"]:
@@ -131,7 +157,11 @@ class event(Cog_extension):
 
         else:
             await ctx.send(hint)
-
+            return
+        success, msg = push2Git.git_commit_and_push(
+                f"./{self.eventName}",
+                f"{ctx.author.name} 參賽/退賽"
+            )
     @commands.command()
     async def Upload(self, ctx, title:str ="TBD"):
         """接收一個壓縮檔，下載並解壓縮"""
