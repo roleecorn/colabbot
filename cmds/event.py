@@ -33,6 +33,7 @@ class event(Cog_extension):
                 eventInfo = json.load(f)
                 self.participants = eventInfo.get("participants", [])
                 self.eventName = eventInfo.get("eventName", "TBD")
+                self.registration = eventInfo.get("Registration", "TBD")
             return True
         return False
     def isNewParticipant(self, user_id: str) -> bool:
@@ -75,7 +76,8 @@ class event(Cog_extension):
     def save_event_info(self, extra: dict = None):
         eventInfo = {
             "eventName": self.eventName,
-            "participants": self.participants
+            "participants": self.participants,
+            "Registration": self.registration
         }
         if extra:
             eventInfo.update(extra)  # 允許額外附加欄位（例如 lastUpload）
@@ -97,10 +99,12 @@ class event(Cog_extension):
             await ctx.send(f"❌ 資料夾 `{strEventName}` 不存在，請聯繫開發者或維護者。")
             return
         self.eventName = strEventName
+        self.registration = str(ctx.channel.id)
         self.loadData()
         os.makedirs(os.path.dirname(self.recent_event_file), exist_ok=True)
         with open(self.recent_event_file, "w", encoding="utf-8") as f:
             f.write(self.eventName)
+        self.save_event_info()
         await ctx.send(f"✅ 已更新活動名稱`{self.eventName}`")
         return
     @commands.command()
@@ -114,7 +118,9 @@ class event(Cog_extension):
         if action is None:
             await ctx.send(hint)
             return
-
+        if str(ctx.channel.id) != self.registration:
+            await ctx.send(f"⚠️ 請在報名區 <#{self.registration}> 報名")
+            return
         # === 報名 ===
         if action.lower() in ["join", "add", "enter", "參加"]:
             if not self.isNewParticipant(user_id):
@@ -218,7 +224,7 @@ class event(Cog_extension):
                 return
             success, msg = push2Git.git_commit_and_push(
                 f"./{self.eventName}",
-                f"Upload作品 {title} by {ctx.author.name}"
+                f"Upload作品 {title}"
             )
             await ctx.send(msg)
         except Exception as e:
