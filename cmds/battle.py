@@ -106,8 +106,8 @@ class battle(Cog_extension):
         hpd = pokd['hp']
         hpa = poka["hp"]
         while (hpd > 0 and hpa > 0):
-            chooseskill1 = random.sample(skill1.keys(), 1)
-            chooseskill2 = random.sample(skill2.keys(), 1)
+            chooseskill1 = random.choice(list(skill1.keys()))
+            chooseskill2 = random.choice(list(skill2.keys()))
             (hpd, hpa, descripe) = battledemo2(
                 hpd, hpa, pokd, poka,
                 chooseskill1[0], chooseskill2[0],
