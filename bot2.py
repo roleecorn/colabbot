@@ -13,6 +13,12 @@ parser.add_argument("--token", help="bots token",
                     type=str)
 parser.add_argument("--ext", help="load extension module",
                     type=str)
+parser.add_argument(
+    "--noBase",
+    help="Won't load base extension",
+    action="store_false",
+    dest="load_base",
+)
 args = parser.parse_args()
 formatter = '%(levelname)s %(asctime)s %(message)s'
 # logging.basicConfig(filename="bot.log",  level=logging.warning,format=formatter, datefmt='%m/%d/%Y %I:%M:%S %p')
@@ -105,7 +111,8 @@ if __name__ == "__main__":
     # bot.run(token)
     async def bot_start():
         async with bot:
-            await load_extensions()
+            if args.load_base:
+                await load_extensions()
             if(extension):
                 for ext in extension:
                     await load_extensions(ext)
