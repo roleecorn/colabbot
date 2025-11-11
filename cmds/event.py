@@ -233,6 +233,29 @@ class event(Cog_extension):
         finally:
             if os.path.exists(filepath):
                 os.remove(filepath)
-        
+    @commands.command()
+    async def Blacklist(self, ctx: commands.Context, *args: str):
+        """黑名單 透過ID input來限制"""
+        if not args:
+            await ctx.send("❌ 請提供至少一個參數！")
+            return
+        data_file = os.path.join(f"./{self.eventName}/","data", "blacklist.json")
+        if(len(args) >5):
+            await ctx.send("❌ 黑名單不可封鎖如此多人")
+            return
+        blacklist = {}
+        if os.path.exists(data_file):
+            # 讀取現有黑名單
+            with open(data_file, "r", encoding="UTF-8") as f:
+                try:
+                    blacklist = json.load(f)
+                except json.JSONDecodeError:
+                    await ctx.send("❌ 出現未預期問題")
+                    return
+        blacklist[str(ctx.author.id)] = args
+        with open(data_file, "w", encoding="UTF-8") as f:
+            json.dump(blacklist, f, indent=4, ensure_ascii=False)
+        await ctx.send("✅ 已更新黑名單")
+        return
 async def setup(bot):
     await bot.add_cog(event(bot))
