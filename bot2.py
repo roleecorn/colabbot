@@ -11,6 +11,8 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--token", help="bots token",
                     type=str)
+parser.add_argument("--ext", help="load extension module",
+                    type=str)
 args = parser.parse_args()
 formatter = '%(levelname)s %(asctime)s %(message)s'
 # logging.basicConfig(filename="bot.log",  level=logging.warning,format=formatter, datefmt='%m/%d/%Y %I:%M:%S %p')
@@ -78,11 +80,16 @@ async def load_async(bot,filename):
     await bot.load_extension(f'cmds.{filename[:-3]}')
 
 
-async def load_extensions():
-    for filename in os.listdir('./cmds'):
+async def load_extensions(ext:str = ""):
+    path = './cmds'
+    modulePath = 'cmds'
+    if(ext):
+        path = f'./cmds/{ext}'
+        modulePath = f'cmds.{ext}'
+    for filename in os.listdir(path):
         if filename.endswith('.py'):
             try:
-                await bot.load_extension(f'cmds.{filename[:-3]}')
+                await bot.load_extension(f'{modulePath}.{filename[:-3]}')
                 # load_async(bot=bot,filename=filename)
                 logging.info(filename)
             except Exception as e:
@@ -92,10 +99,15 @@ if __name__ == "__main__":
     # print(botdata["token"])
     logging.warning('Start the bot')
     token = args.token
-
+    extension = []
+    if(args.ext):
+        extension = args.ext.split("-")
     # bot.run(token)
     async def bot_start():
         async with bot:
             await load_extensions()
+            if(extension):
+                for ext in extension:
+                    await load_extensions(ext)
             await bot.start(token)
     asyncio.run(bot_start())
