@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from discord import Member, User, Guild, Permissions
 from discord.ext.commands import Context
+GUILD_ID = 689838165347139766
 class Cog_extension(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -18,6 +19,6 @@ class Cog_extension(commands.Cog):
         return author.guild_permissions.administrator
     @staticmethod
     def bIsAAFanclub(ctx: Context):
-        if ctx.guild.id == 689838165347139766:
+        if ctx.guild.id == GUILD_ID:
             return True
         return False

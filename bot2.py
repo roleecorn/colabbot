@@ -11,7 +11,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--token", help="bots token",
                     type=str)
-parser.add_argument("--ext", help="load extension module",
+parser.add_argument("--ext", help="load extension module (e.g. gitRely.event_single or gitRely/event_single.py)",
                     type=str)
 parser.add_argument(
     "--noBase",
@@ -81,25 +81,69 @@ async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandOnCooldown):
         await ctx.send("說了不要狂刷指令吧?")
 
-
+@bot.event
+async def on_ready():
+    slash = await bot.tree.sync()
+    print(f"目前登入身份 --> {bot.user}")
+    print(f"載入 {len(slash)} 個斜線指令")
+    
 async def load_async(bot,filename):
     await bot.load_extension(f'cmds.{filename[:-3]}')
 
 
+def _ext_to_module(ext: str):
+    ext = ext.strip()
+    if not ext:
+        return None, "ext is empty"
+
+    raw = ext
+    if ext.endswith(".py"):
+        ext = ext[:-3]
+    ext = ext.replace("\\", "/").strip("/")
+    ext = ext.replace("/", ".")
+
+    if ext.startswith("cmds."):
+        rel = ext[5:]
+        module = ext
+    else:
+        rel = ext
+        module = f"cmds.{ext}"
+
+    file_path = os.path.join("cmds", *rel.split(".")) + ".py"
+    dir_path = os.path.join("cmds", *rel.split("."))
+
+    if os.path.isfile(file_path):
+        return module, None
+    if os.path.isdir(dir_path):
+        return None, f"ext '{raw}' looks like a folder; specify a module file under it"
+
+    return module, f"ext '{raw}' not found on disk; trying to load anyway"
+
+
 async def load_extensions(ext:str = ""):
-    path = './cmds'
-    modulePath = 'cmds'
-    if(ext):
-        path = f'./cmds/{ext}'
-        modulePath = f'cmds.{ext}'
-    for filename in os.listdir(path):
-        if filename.endswith('.py'):
-            try:
-                await bot.load_extension(f'{modulePath}.{filename[:-3]}')
-                # load_async(bot=bot,filename=filename)
-                logging.info(filename)
-            except Exception as e:
-                logging.warning(f"{filename} error!{e}")
+    if not ext:
+        path = './cmds'
+        modulePath = 'cmds'
+        for filename in os.listdir(path):
+            if filename.endswith('.py'):
+                try:
+                    await bot.load_extension(f'{modulePath}.{filename[:-3]}')
+                    # load_async(bot=bot,filename=filename)
+                    logging.info(filename)
+                except Exception as e:
+                    logging.warning(f"{filename} error!{e}")
+        return
+
+    module, warn = _ext_to_module(ext)
+    if warn:
+        logging.warning(warn)
+    if not module:
+        return
+    try:
+        await bot.load_extension(module)
+        logging.info(module)
+    except Exception as e:
+        logging.warning(f"{module} error!{e}")
 if __name__ == "__main__":
 
     # print(botdata["token"])

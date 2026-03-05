@@ -21,7 +21,11 @@ def extract_file(file_path, target_path):
                             filename = filename.encode("cp437").decode("gbk")
                         except:
                             pass  # 保持原樣
+                
                 extracted_path = os.path.join(target_path, filename)
+                if info.is_dir():
+                    os.makedirs(extracted_path, exist_ok=True)
+                    continue
                 os.makedirs(os.path.dirname(extracted_path), exist_ok=True)
                 with zf.open(info) as source, open(extracted_path, "wb") as target:
                     target.write(source.read())

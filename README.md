@@ -1,5 +1,8 @@
 # Discord bot for colab 
 
+## Command Docs
+- `docs/event_commands.md`
+
 <img src="https://media.discordapp.net/attachments/971283366345310279/1039769876711079946/2022-11-09_1.14.01.png?raw=flase" alt="drawing" width="200"/><br>
 
 ## This bot is using discord.py==1.7.3
@@ -28,4 +31,3 @@
 
 ##### after analysis
 http://manhua.dmzj.com/dianziyaojingbuhuimengdaomoshenzhu/136969.shtml
-
