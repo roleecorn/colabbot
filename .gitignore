@@ -3,3 +3,7 @@ corn.py
 *.zip
 *.ipynb
 __pycache__/
+# Event participant mappings, anonymous messages, blacklists and gift results
+# are private runtime data and must never enter a public event repository.
+data/active-event.json
+data/events/

@@ -115,6 +115,8 @@ def _ext_to_module(ext: str):
     if os.path.isfile(file_path):
         return module, None
     if os.path.isdir(dir_path):
+        if os.path.isfile(os.path.join(dir_path, "__init__.py")):
+            return module, None
         return None, f"ext '{raw}' looks like a folder; specify a module file under it"
 
     return module, f"ext '{raw}' not found on disk; trying to load anyway"

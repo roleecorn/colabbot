@@ -1,8 +1,6 @@
-"""Backward-compatible extension name for the unified event Cog."""
+"""Unified event-system package."""
 
 from .event_cog import EventCog
-
-event = EventCog
 
 
 async def setup(bot):

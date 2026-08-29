@@ -2,6 +2,8 @@
 
 ## Command Docs
 - `docs/event_commands.md`
+- `docs/event_architecture.md`（活動系統重構目標）
+- `docs/event_operations.md`（營運操作手冊與 checklist）
 
 <img src="https://media.discordapp.net/attachments/971283366345310279/1039769876711079946/2022-11-09_1.14.01.png?raw=flase" alt="drawing" width="200"/><br>
 
