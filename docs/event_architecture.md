@@ -158,6 +158,23 @@ https://<pages-host>/<event>/<participant_key>/<topic_key>/
 `topic_key` 由活動建立時產生並保存，不應在每次上傳時臨時把題目名稱替換成資料夾名稱。
 它必須短、穩定且通過 Windows、Git 與 URL 的共同限制。
 
+### 5.3 靜態作品頁公開索引
+
+作品頁不應依賴掃描目錄來決定顯示順序。一般投稿活動可在公開 repository 保存兩份不含
+Discord ID 的索引：
+
+```text
+<event_repo>/
+  data/
+    playerHashMap.json   # uid、隨機 participant key、公開顯示名稱
+    workUserMap.json     # participant key、topic key、標題與預覽 URL
+```
+
+`playerHashMap.json` 的 `uid` 由報名順序決定；`workUserMap.json` 必須以
+`uid` 再以 `topics` 的設定順序排序。這樣前端可以選擇按題目分組（SpringEvent 的模式），
+也可以按參加者分組；例如 SummerEvent 固定顯示 User A 的第一至第五篇，再顯示 User B
+的第一至第五篇。上傳、覆蓋與清除作品時，索引必須和作品目錄一起納入同一個可回復的發布交易。
+
 ### 5.2 聖誕交換活動
 
 ```text
@@ -181,7 +198,8 @@ https://<pages-host>/<event>/<participant_key>/<topic_key>/
 1. 以 UUID 建立本次請求專用的暫存目錄。
 2. 驗證副檔名、檔案大小、解壓後大小、檔案數量與路徑。
 3. 解壓到暫存目錄，拒絕絕對路徑與 `..` 路徑穿越。
-4. 建立並驗證預覽頁。
+4. 若作品內已有 HTML，優先使用 `index.html`；沒有時使用名稱排序第一個 HTML。只有完全沒有 HTML
+   時，才依圖片產生預覽頁並驗證結果。
 5. 使用該參加者既有的隨機 `participant_key` 組合正式路徑。
 6. 將既有 `<participant_key>/<topic_key>` 移到可回復的備份位置。
 7. 原子性地以新目錄替換正式作品目錄。
@@ -318,6 +336,7 @@ cmds/gitRely/
   christmas_service.py         # 匿名訊息、黑名單、配對協調
   repositories.py              # 公開與私密 JSON repository
   storage.py                   # 安全路徑、暫存目錄、原子替換
+  public_index.py              # 公開參加者／作品索引與排序
   publisher.py                 # 非同步 Git 發布
   matching/
     protocol.py                # GiftMatchingPolicy
@@ -364,7 +383,8 @@ slash command 名稱維持不變；只有內部函式與資料欄位改名。
 
 - 所有預期中的使用者錯誤使用 ephemeral 回覆。
 - 所有 Git 結果都必須回報，不得忽略 `success`。
-- 下載頭像失敗不能讓報名資料停留在半完成狀態；頭像應視為非必要的衍生資料。
+- 對需要 icon 的活動（例如 SummerEvent），報名後必須從 Discord 下載並發布參賽者 icon；下載失敗
+  不應丟失報名資料，但必須可由管理員重新同步，直到公開活動頁的 icon 完整。
 - 上傳成功必須代表檔案驗證、替換及 Git push 全部完成。
 - `/clear` 必須可在 Git 失敗時回復原作品。
 - JSON 格式錯誤時不得以空資料覆蓋原檔。

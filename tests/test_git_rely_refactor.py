@@ -12,6 +12,8 @@ from cmds.gitRely.christmas_service import ChristmasService, ChristmasServiceErr
 from cmds.gitRely.models import EventStatus, event_status
 from cmds.gitRely.models import GiftAssignment
 from cmds.gitRely.repositories import EventRepository
+from cmds.gitRely.public_index import PublicEventIndex
+from cmds.gitRely.startup import EventStartupError, validate_active_event_configuration
 from cmds.gitRely.storage import SubmissionStorage
 from cmds.gitRely.submission_service import SubmissionService, SubmissionServiceError
 from cmds.gitRely.event_cog import EventCog
@@ -97,6 +99,16 @@ class EventRefactorTests(unittest.TestCase):
         self.assertEqual(event_status(event.private, datetime(2026, 1, 3, tzinfo=TZ)), EventStatus.SUBMISSION_OPEN)
         self.assertEqual(event_status(event.private, datetime(2026, 1, 4, tzinfo=TZ)), EventStatus.CLOSED)
 
+    def test_startup_check_rejects_invalid_active_event(self):
+        make_event(self.service, "startup-invalid")
+        private_path = self.repository.private_path("startup-invalid")
+        private = json.loads(private_path.read_text(encoding="utf-8"))
+        private["submission_starts_at"] = private["registration_starts_at"]
+        private_path.write_text(json.dumps(private), encoding="utf-8")
+
+        with self.assertRaises(EventStartupError):
+            validate_active_event_configuration(self.repository)
+
     def test_join_uses_random_private_key(self):
         make_event(self.service)
         self.service.clock = lambda: datetime(2026, 1, 1, 12, tzinfo=TZ)
@@ -124,6 +136,23 @@ class EventRefactorTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             SubmissionStorage().extract_archive(archive, destination)
         self.assertFalse(destination.exists())
+
+    def test_existing_html_is_preferred_over_generated_gallery(self):
+        root = Path(self.temp.name) / "submission"
+        root.mkdir()
+        (root / "z.html").write_text("z", encoding="utf-8")
+        (root / "a.html").write_text("a", encoding="utf-8")
+        (root / "cover.png").write_bytes(b"image")
+
+        selected = SubmissionStorage.generate_gallery(root, "ignored title")
+
+        self.assertEqual(selected, root / "a.html")
+        self.assertFalse((root / "index.html").exists())
+
+        (root / "index.html").write_text("index", encoding="utf-8")
+        selected = SubmissionStorage.generate_gallery(root, "ignored title")
+        self.assertEqual(selected, root / "index.html")
+        self.assertEqual((root / "index.html").read_text(encoding="utf-8"), "index")
 
     def test_failed_publish_restores_previous_submission(self):
         event = make_event(self.service, "upload")
@@ -159,6 +188,8 @@ class EventRefactorTests(unittest.TestCase):
                 "123", archive_one, topic="one", title="old", now=datetime(2026, 1, 3, tzinfo=TZ)
             )
         )
+        work_index = root / "public" / "upload" / "data" / "workUserMap.json"
+        self.assertEqual(json.loads(work_index.read_text(encoding="utf-8"))[0]["title"], "old")
         with self.assertRaises(SubmissionServiceError):
             asyncio.run(
                 submissions.upload_archive(
@@ -168,6 +199,41 @@ class EventRefactorTests(unittest.TestCase):
         target = self.repository.public_dir("upload") / "pieces" / participant.participant_key
         self.assertEqual((target / event.public.topics[0].key / "old.png").read_bytes(), b"old")
         self.assertFalse((target / event.public.topics[0].key / "new.png").exists())
+        self.assertEqual(json.loads(work_index.read_text(encoding="utf-8"))[0]["title"], "old")
+
+    def test_public_index_orders_each_participant_before_the_next(self):
+        event = make_event(self.service, "summer-order")
+        self.service.clock = lambda: datetime(2026, 1, 1, 12, tzinfo=TZ)
+        first = asyncio.run(self.service.join("123", "User A"))
+        second = asyncio.run(self.service.join("456", "User B"))
+        event = asyncio.run(self.service.load_active())
+        index = PublicEventIndex(self.repository)
+
+        index.upsert_work(event, first, event.public.topics[1], "A-2")
+        index.upsert_work(event, second, event.public.topics[0], "B-1")
+        index.upsert_work(event, first, event.public.topics[0], "A-1")
+
+        works = json.loads(
+            (self.repository.public_dir("summer-order") / "data" / "workUserMap.json")
+            .read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            [(item["name"], item["topic"]) for item in works],
+            [("User A", "one"), ("User A", "two"), ("User B", "one")],
+        )
+        public_text = json.dumps(works, ensure_ascii=False)
+        self.assertNotIn("123", public_text)
+        self.assertNotIn("456", public_text)
+        self.assertEqual(first.participant_key, works[0]["hashId"])
+        self.assertEqual(second.participant_key, works[-1]["hashId"])
+        self.assertEqual(
+            PublicEventIndex.work_url(first.participant_key, "one"),
+            f"pieces/{first.participant_key}/one/",
+        )
+        self.assertEqual(
+            PublicEventIndex.work_url(first.participant_key, "one", "reader/main.html"),
+            f"pieces/{first.participant_key}/one/reader/main.html",
+        )
 
     def test_clear_is_rejected_after_submission_deadline(self):
         event = make_event(self.service, "clear")

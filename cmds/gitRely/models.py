@@ -80,6 +80,7 @@ class Participant:
     participant_key: str
     joined_at: datetime
     display_name: str = ""
+    avatar_path: str = ""
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "Participant":
@@ -88,6 +89,7 @@ class Participant:
             participant_key=_required_string(data, "participant_key"),
             joined_at=_parse_datetime(data.get("joined_at"), "joined_at"),
             display_name=str(data.get("display_name", "")),
+            avatar_path=str(data.get("avatar_path", "")),
         )
 
     def to_dict(self) -> dict[str, str]:
@@ -98,6 +100,8 @@ class Participant:
         }
         if self.display_name:
             data["display_name"] = self.display_name
+        if self.avatar_path:
+            data["avatar_path"] = self.avatar_path
         return data
 
 

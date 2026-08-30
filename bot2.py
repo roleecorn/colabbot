@@ -8,6 +8,7 @@ import logging
 # import http.server
 # import socketserver
 import argparse
+from cmds.gitRely.startup import EventStartupError, validate_active_event_configuration
 parser = argparse.ArgumentParser()
 parser.add_argument("--token", help="bots token",
                     type=str)
@@ -162,5 +163,10 @@ if __name__ == "__main__":
             if(extension):
                 for ext in extension:
                     await load_extensions(ext)
+            try:
+                validate_active_event_configuration()
+            except EventStartupError as exc:
+                logging.critical(str(exc))
+                raise SystemExit(1) from exc
             await bot.start(token)
     asyncio.run(bot_start())

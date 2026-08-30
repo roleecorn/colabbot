@@ -167,6 +167,24 @@ class EventService:
                 raise EventServiceError("你尚未報名。")
             await asyncio.to_thread(self.repository.save_private, private, public)
 
+    async def set_participant_avatar(self, user_id: str, avatar_path: str) -> Participant:
+        """Store the public event-relative path for a participant's avatar."""
+        user_id = str(user_id)
+        event = await self.load_active()
+        async with self._lock_for(event.public.event_key):
+            public, private = await asyncio.to_thread(
+                self.repository.load_event, event.public.event_key
+            )
+            participant = next(
+                (item for item in private.participants if item.discord_user_id == user_id),
+                None,
+            )
+            if participant is None:
+                raise EventServiceError("找不到這位活動參賽者。")
+            participant.avatar_path = avatar_path
+            await asyncio.to_thread(self.repository.save_private, private, public)
+            return participant
+
     async def resolve_topic(self, topic: str | None) -> Topic:
         event = await self.load_active()
         if topic is None or not str(topic).strip():

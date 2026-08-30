@@ -10,6 +10,7 @@ from pathlib import Path
 from .event_service import EventService
 from .models import EventStatus, event_status
 from .publisher import GitPublishError, GitPublisher
+from .public_index import PublicEventIndex, PublicIndexSnapshot
 from .storage import SubmissionStorage, safe_component
 
 
@@ -34,11 +35,13 @@ class SubmissionService:
         storage: SubmissionStorage | None = None,
         publisher: GitPublisher | None = None,
         pages_host: str = "https://aafanclubdc.github.io",
+        public_index: PublicEventIndex | None = None,
     ) -> None:
         self.events = events
         self.storage = storage or SubmissionStorage()
         self.publisher = publisher or GitPublisher()
         self.pages_host = pages_host.rstrip("/")
+        self.public_index = public_index or PublicEventIndex(events.repository)
 
     @classmethod
     def _lock_for(cls, event_key: str) -> asyncio.Lock:
@@ -81,10 +84,14 @@ class SubmissionService:
             request_dir = await asyncio.to_thread(self.storage.create_request_directory)
             staged = request_dir / "submission"
             backup = None
+            index_backup: PublicIndexSnapshot | None = None
             try:
                 try:
                     await asyncio.to_thread(self.storage.extract_archive, source, staged)
-                    await asyncio.to_thread(self.storage.generate_gallery, staged, title)
+                    gallery_path = await asyncio.to_thread(
+                        self.storage.generate_gallery, staged, title
+                    )
+                    gallery_file = gallery_path.relative_to(staged).as_posix()
                 except (OSError, ValueError, RuntimeError) as exc:
                     raise SubmissionServiceError(
                         "作品檔案無法處理，請確認壓縮檔格式、內容與檔案大小限制。"
@@ -94,11 +101,24 @@ class SubmissionService:
                 except (OSError, ValueError) as exc:
                     raise SubmissionServiceError("無法替換作品目錄，作品尚未發布，請稍後再試。") from exc
                 try:
+                    index_backup = await asyncio.to_thread(
+                        self.public_index.snapshot, event_key
+                    )
+                    await asyncio.to_thread(
+                        self.public_index.upsert_work,
+                        event,
+                        participant,
+                        selected_topic,
+                        title,
+                        gallery_file,
+                    )
                     await self.publisher.publish(
                         repo,
                         commit_message or f"Upload {title} ({selected_topic.name})",
                     )
-                except (GitPublishError, OSError, RuntimeError) as exc:
+                except (GitPublishError, OSError, RuntimeError, ValueError) as exc:
+                    if index_backup is not None:
+                        await asyncio.to_thread(self.public_index.restore, index_backup)
                     await asyncio.to_thread(self.storage.rollback, target, backup)
                     raise SubmissionServiceError("作品發布失敗，已還原上一個版本，請稍後再試。") from exc
                 await asyncio.to_thread(self.storage.discard_backup, backup)
@@ -107,8 +127,8 @@ class SubmissionService:
                     participant_key=participant.participant_key,
                     topic_key=selected_topic.key,
                     preview_url=(
-                        f"{self.pages_host}/{event_key}/pieces/"
-                        f"{participant.participant_key}/{selected_topic.key}/"
+                        f"{self.pages_host}/{event_key}/"
+                        f"{self.public_index.work_url(participant.participant_key, selected_topic.key, gallery_file)}"
                     ),
                 )
             finally:
@@ -149,17 +169,29 @@ class SubmissionService:
             empty = request_dir / "empty"
             empty.mkdir()
             backup = None
+            index_backup: PublicIndexSnapshot | None = None
             try:
                 try:
                     backup = await asyncio.to_thread(self.storage.replace_directory, empty, target)
                 except (OSError, ValueError) as exc:
                     raise SubmissionServiceError("無法清除作品目錄，作品尚未變更，請稍後再試。") from exc
                 try:
+                    index_backup = await asyncio.to_thread(
+                        self.public_index.snapshot, event.public.event_key
+                    )
+                    await asyncio.to_thread(
+                        self.public_index.remove_work,
+                        event,
+                        participant,
+                        selected_topic,
+                    )
                     await self.publisher.publish(
                         self.events.repository.public_dir(event.public.event_key),
                         commit_message or f"Clear submission ({selected_topic.name})",
                     )
-                except (GitPublishError, OSError, RuntimeError) as exc:
+                except (GitPublishError, OSError, RuntimeError, ValueError) as exc:
+                    if index_backup is not None:
+                        await asyncio.to_thread(self.public_index.restore, index_backup)
                     await asyncio.to_thread(self.storage.rollback, target, backup)
                     raise SubmissionServiceError("作品清除發布失敗，已還原原作品，請稍後再試。") from exc
                 await asyncio.to_thread(self.storage.discard_backup, backup)

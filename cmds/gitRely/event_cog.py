@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import re
@@ -17,6 +18,7 @@ from discord import app_commands
 from core.classes import Cog_extension
 
 from .christmas_service import ChristmasService, ChristmasServiceError
+from .avatar_service import AvatarService, AvatarServiceError
 from .event_service import EventService, EventServiceError
 from .models import EventType
 from .repositories import EventRepository
@@ -45,6 +47,7 @@ class EventCog(Cog_extension):
         self.event_service = event_service or EventService(self.repository)
         self.submission_service = submission_service or SubmissionService(self.event_service)
         self.christmas_service = christmas_service or ChristmasService(self.event_service)
+        self.avatar_service = AvatarService(self.event_service)
 
     async def _send(self, interaction: discord.Interaction, content: str, *, ephemeral: bool = False):
         if interaction.response.is_done():
@@ -195,9 +198,15 @@ class EventCog(Cog_extension):
             await interaction.response.defer(thinking=True)
             if action == "join":
                 participant = await self.event_service.join(str(interaction.user.id), interaction.user.name)
+                try:
+                    await self._publish_participant_avatar(participant, interaction.user)
+                    message = "報名成功，頭像已同步。"
+                except (AvatarServiceError, EventServiceError, OSError, ValueError):
+                    logger.warning("Could not sync avatar for participant %s", participant.discord_user_id, exc_info=True)
+                    message = "報名成功，但頭像同步失敗，管理員可稍後重新同步。"
                 # The participant key is private mapping data and must never
                 # be exposed in a public channel.
-                await self._send(interaction, "報名成功。", ephemeral=True)
+                await self._send(interaction, message, ephemeral=True)
             elif action == "leave":
                 await self.event_service.leave(str(interaction.user.id))
                 await self._send(interaction, "已退出活動。")
@@ -207,6 +216,62 @@ class EventCog(Cog_extension):
             await self._error(interaction, self._user_error(exc))
         except Exception as exc:
             await self._unexpected_error(interaction, "event", exc)
+
+    async def _publish_participant_avatar(self, participant, user) -> None:
+        await self.avatar_service.sync_participant(participant.discord_user_id, user.display_avatar)
+        event = await self.event_service.load_active()
+        index = self.submission_service.public_index
+        snapshot = await asyncio.to_thread(index.sync_participants, event)
+        try:
+            await self.submission_service.publisher.publish(
+                self.repository.public_dir(event.public.event_key),
+                f"Update participant avatar ({participant.display_name or participant.discord_user_id})",
+            )
+        except Exception:
+            await asyncio.to_thread(index.restore, snapshot)
+            raise
+
+    @app_commands.command(name="eventsyncicons", description="同步目前活動所有參賽者的 Discord 頭像")
+    async def sync_event_icons(self, interaction: discord.Interaction):
+        if not self._is_admin(interaction):
+            await self._error(interaction, "只有管理員可以同步活動頭像。")
+            return
+        await interaction.response.defer(thinking=True, ephemeral=True)
+        try:
+            event = await self.event_service.load_active()
+            synced = 0
+            failed = []
+            for participant in event.private.participants:
+                try:
+                    user = await self.bot.fetch_user(int(participant.discord_user_id))
+                    await self.avatar_service.sync_participant(
+                        participant.discord_user_id, user.display_avatar
+                    )
+                    synced += 1
+                except Exception:
+                    failed.append(participant.display_name or participant.discord_user_id)
+                    logger.warning(
+                        "Could not sync avatar for participant %s",
+                        participant.discord_user_id,
+                        exc_info=True,
+                    )
+            event = await self.event_service.load_active()
+            index = self.submission_service.public_index
+            snapshot = await asyncio.to_thread(index.sync_participants, event)
+            try:
+                await self.submission_service.publisher.publish(
+                    self.repository.public_dir(event.public.event_key),
+                    "Sync event participant avatars",
+                )
+            except Exception:
+                await asyncio.to_thread(index.restore, snapshot)
+                raise
+            summary = f"已同步 {synced} 位參賽者的頭像。"
+            if failed:
+                summary += "\n同步失敗：" + "、".join(failed)
+            await self._send(interaction, summary, ephemeral=True)
+        except Exception as exc:
+            await self._unexpected_error(interaction, "eventsyncicons", exc)
 
     async def _topic_autocomplete(self, interaction: discord.Interaction, current: str):
         try:

@@ -187,15 +187,25 @@ class SubmissionStorage:
         root = Path(folder)
         if not title.strip():
             raise ValueError("title cannot be empty")
+        existing_html = sorted(
+            (
+                path
+                for path in root.rglob("*")
+                if path.is_file() and path.suffix.lower() in {".html", ".htm"}
+            ),
+            key=lambda path: path.as_posix().lower(),
+        )
+        if existing_html:
+            return next(
+                (path for path in existing_html if path.name.lower() == "index.html"),
+                existing_html[0],
+            )
         images = sorted(
             (path for path in root.rglob("*") if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS),
             key=lambda path: path.as_posix().lower(),
         )
         if not images:
-            html_path = root / "index.html"
-            if not (root / "index.html").exists():
-                raise ValueError("submission contains no images or index.html")
-            return html_path
+            raise ValueError("submission contains no images or HTML file")
         tags = []
         for image in images:
             relative = image.relative_to(root).as_posix()
