@@ -23,15 +23,17 @@ py .\bot2.py --token <TOKEN> --noBase --ext gitRely
 | `/upload` | `file`、`title` 必填；`topic` 單題時可留空 | 安全解壓、建立預覽並完整覆蓋指定題目的作品；Git 發布失敗會回復舊版本。 |
 | `/clear` | `topic` 單題時可留空 | 清除自己的指定題目作品；Git 發布失敗會回復舊版本。 |
 
-## 額外指令（僅 `christmas` 活動）
+## Christmas 指令群組（僅 `christmas` 活動）
+
+Christmas 專用指令會集中在 `/christmas` 群組下：
 
 | 指令 | 參數 | 說明 |
 |---|---|---|
-| `/blacklist` | `ids`（以空白分隔，可留空） | 設定黑名單；每次是完整覆蓋，不是追加。 |
-| `/anonsay` | `content` | 匿名發言；作者只保存於私密資料。 |
-| `/anonreply` | `message_id`、`content` | 匿名回覆指定訊息。 |
-| `/giftshuffle` | 無 | 管理員依活動指定策略產生一次配對；已有結果時拒絕重抽。 |
-| `/giftme` | 無 | 查看配對策略允許目前使用者看到的結果。 |
+| `/christmas blacklist` | `ids`（以空白分隔，可留空） | 設定黑名單；每次是完整覆蓋，不是追加。 |
+| `/christmas anonsay` | `content` | 匿名發言；作者只保存於私密資料。 |
+| `/christmas anonreply` | `message_id`、`content` | 匿名回覆指定訊息。 |
+| `/christmas giftshuffle` | 無 | 管理員依活動指定策略產生一次配對；已有結果時拒絕重抽。 |
+| `/christmas giftme` | 無 | 查看配對策略允許目前使用者看到的結果。 |
 
 ## 注意事項
 

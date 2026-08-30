@@ -246,11 +246,11 @@ https://aafanclubdc.github.io/<event_key>/pieces/<participant_key>/<topic_key>/
 報名與投稿階段依一般流程執行。Christmas 額外指令：
 
 ```text
-/anonsay content:<內容>
-/anonreply message_id:<訊息 ID 或連結> content:<內容>
-/blacklist ids:<以空白分隔的 Discord ID>
-/giftshuffle
-/giftme
+  /christmas anonsay content:<內容>
+  /christmas anonreply message_id:<訊息 ID 或連結> content:<內容>
+  /christmas blacklist ids:<以空白分隔的 Discord ID>
+  /christmas giftshuffle
+  /christmas giftme
 ```
 
 操作規則：

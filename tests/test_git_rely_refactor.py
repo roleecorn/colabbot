@@ -82,6 +82,13 @@ class EventRefactorTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_christmas_commands_are_registered_under_one_group(self):
+        self.assertEqual(EventCog.christmas_group.name, "christmas")
+        self.assertEqual(
+            {command.name for command in EventCog.christmas_group.commands},
+            {"anonsay", "anonreply", "blacklist", "giftshuffle", "giftme"},
+        )
+
     def test_status_boundaries_are_derived(self):
         event = make_event(self.service)
         self.assertEqual(event_status(event.private, datetime(2025, 12, 31, 23, 59, tzinfo=TZ)), EventStatus.SCHEDULED)

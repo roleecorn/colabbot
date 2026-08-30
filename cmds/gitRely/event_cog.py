@@ -26,6 +26,11 @@ logger = logging.getLogger(__name__)
 
 
 class EventCog(Cog_extension):
+    christmas_group = app_commands.Group(
+        name="christmas",
+        description="Christmas 活動指令",
+    )
+
     def __init__(
         self,
         bot,
@@ -262,7 +267,7 @@ class EventCog(Cog_extension):
         except Exception as exc:
             await self._unexpected_error(interaction, "clear", exc)
 
-    @app_commands.command(name="anonsay", description="匿名發言")
+    @christmas_group.command(name="anonsay", description="匿名發言")
     @app_commands.describe(content="內容")
     async def anon_say(self, interaction: discord.Interaction, content: str):
         try:
@@ -278,7 +283,7 @@ class EventCog(Cog_extension):
         except Exception as exc:
             await self._unexpected_error(interaction, "anonsay", exc)
 
-    @app_commands.command(name="anonreply", description="匿名回覆")
+    @christmas_group.command(name="anonreply", description="匿名回覆")
     @app_commands.describe(message_id="訊息 ID 或系統匿名訊息 ID", content="回覆內容")
     async def anon_reply(self, interaction: discord.Interaction, message_id: str, content: str):
         try:
@@ -300,7 +305,7 @@ class EventCog(Cog_extension):
         except Exception as exc:
             await self._unexpected_error(interaction, "anonreply", exc)
 
-    @app_commands.command(name="blacklist", description="設定黑名單（完整覆蓋）")
+    @christmas_group.command(name="blacklist", description="設定黑名單（完整覆蓋）")
     @app_commands.describe(ids="要封鎖的 Discord ID，以空白分隔；留空可清除")
     async def blacklist(self, interaction: discord.Interaction, ids: str = ""):
         try:
@@ -314,7 +319,7 @@ class EventCog(Cog_extension):
         except Exception as exc:
             await self._unexpected_error(interaction, "blacklist", exc)
 
-    @app_commands.command(name="giftshuffle", description="依活動規則產生送禮配對")
+    @christmas_group.command(name="giftshuffle", description="依活動規則產生送禮配對")
     async def gift_shuffle(self, interaction: discord.Interaction):
         if not self._is_admin(interaction):
             await self._error(interaction, "需要管理員權限。")
@@ -328,7 +333,7 @@ class EventCog(Cog_extension):
         except Exception as exc:
             await self._unexpected_error(interaction, "giftshuffle", exc)
 
-    @app_commands.command(name="giftme", description="查看活動允許公開的配對結果")
+    @christmas_group.command(name="giftme", description="查看活動允許公開的配對結果")
     async def gift_me(self, interaction: discord.Interaction):
         try:
             await interaction.response.defer(ephemeral=True)
