@@ -129,6 +129,18 @@ class EventRefactorTests(unittest.TestCase):
             },
         )
 
+    def test_event_timezone_parameter_has_24_valid_iana_choices(self):
+        timezone = next(
+            parameter
+            for parameter in EventCog.set_event_name.parameters
+            if parameter.name == "timezone"
+        )
+        self.assertEqual(len(timezone.choices), 24)
+        self.assertIn("Asia/Taipei", {choice.value for choice in timezone.choices})
+        for choice in timezone.choices:
+            with self.subTest(timezone=choice.value):
+                ZoneInfo(choice.value)
+
     def test_unexpected_errors_get_actionable_messages_by_failure_type(self):
         cases = (
             (ConnectionError("secret endpoint"), "無法連線至必要服務"),

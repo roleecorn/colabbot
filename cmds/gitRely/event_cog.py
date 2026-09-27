@@ -29,6 +29,33 @@ from .publisher import GitPublishError, LocalOnlyPublisher
 
 logger = logging.getLogger(__name__)
 
+TIMEZONE_CHOICES = [
+    app_commands.Choice(name="UTC", value="UTC"),
+    app_commands.Choice(name="Asia/Taipei — 台北", value="Asia/Taipei"),
+    app_commands.Choice(name="Asia/Tokyo — 東京", value="Asia/Tokyo"),
+    app_commands.Choice(name="Asia/Seoul — 首爾", value="Asia/Seoul"),
+    app_commands.Choice(name="Asia/Shanghai — 上海", value="Asia/Shanghai"),
+    app_commands.Choice(name="Asia/Singapore — 新加坡", value="Asia/Singapore"),
+    app_commands.Choice(name="Asia/Bangkok — 曼谷", value="Asia/Bangkok"),
+    app_commands.Choice(name="Asia/Kolkata — 加爾各答", value="Asia/Kolkata"),
+    app_commands.Choice(name="Asia/Dubai — 杜拜", value="Asia/Dubai"),
+    app_commands.Choice(name="Europe/Moscow — 莫斯科", value="Europe/Moscow"),
+    app_commands.Choice(name="Europe/London — 倫敦", value="Europe/London"),
+    app_commands.Choice(name="Europe/Paris — 巴黎", value="Europe/Paris"),
+    app_commands.Choice(name="Europe/Berlin — 柏林", value="Europe/Berlin"),
+    app_commands.Choice(name="Europe/Helsinki — 赫爾辛基", value="Europe/Helsinki"),
+    app_commands.Choice(name="Africa/Cairo — 開羅", value="Africa/Cairo"),
+    app_commands.Choice(name="Africa/Johannesburg — 約翰尼斯堡", value="Africa/Johannesburg"),
+    app_commands.Choice(name="America/New_York — 紐約", value="America/New_York"),
+    app_commands.Choice(name="America/Toronto — 多倫多", value="America/Toronto"),
+    app_commands.Choice(name="America/Chicago — 芝加哥", value="America/Chicago"),
+    app_commands.Choice(name="America/Denver — 丹佛", value="America/Denver"),
+    app_commands.Choice(name="America/Los_Angeles — 洛杉磯", value="America/Los_Angeles"),
+    app_commands.Choice(name="America/Sao_Paulo — 聖保羅", value="America/Sao_Paulo"),
+    app_commands.Choice(name="Australia/Sydney — 雪梨", value="Australia/Sydney"),
+    app_commands.Choice(name="Pacific/Auckland — 奧克蘭", value="Pacific/Auckland"),
+]
+
 
 class EventCog(Cog_extension):
     guess_group = app_commands.Group(
@@ -205,7 +232,7 @@ class EventCog(Cog_extension):
     @app_commands.describe(
         event_name="活動代碼（也會作為公開顯示名稱）",
         event_type="submission、christmas 或 group",
-        timezone="IANA 時區，例如 Asia/Taipei",
+        timezone="選擇活動時區（24 個常用 IANA 時區）",
         registration_starts_at="報名開始（ISO 時間或 yyyymmdd-HHMM）",
         registration_ends_at="報名截止（ISO 時間或 yyyymmdd-HHMM）",
         submission_starts_at="投稿開始（ISO 時間或 yyyymmdd-HHMM）",
@@ -217,7 +244,8 @@ class EventCog(Cog_extension):
             app_commands.Choice(name="submission", value="submission"),
             app_commands.Choice(name="christmas", value="christmas"),
             app_commands.Choice(name="group", value="group"),
-        ]
+        ],
+        timezone=TIMEZONE_CHOICES,
     )
     async def set_event_name(
         self,
