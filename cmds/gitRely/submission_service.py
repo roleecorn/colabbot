@@ -24,6 +24,7 @@ class SubmissionResult:
     participant_key: str
     topic_key: str
     preview_url: str
+    overtime: bool = False
 
 
 class SubmissionService:
@@ -55,12 +56,16 @@ class SubmissionService:
         topic: str | None = None,
         title: str,
         commit_message: str | None = None,
+        overtime: bool = False,
         now: datetime | None = None,
     ) -> SubmissionResult:
         event = await self.events.load_active()
         current = now or datetime.now(event.private.submission_starts_at.tzinfo)
         current_status = event_status(event.private, current)
-        if current_status is not EventStatus.SUBMISSION_OPEN:
+        if overtime:
+            if current < event.private.submission_ends_at:
+                raise SubmissionServiceError("超時投稿只能在投稿截止後使用。")
+        elif current_status is not EventStatus.SUBMISSION_OPEN:
             raise SubmissionServiceError("目前不是投稿期間，無法上傳作品。")
         participant = next(
             (
@@ -114,6 +119,7 @@ class SubmissionService:
                         selected_topic,
                         title,
                         gallery_file,
+                        overtime=overtime,
                     )
                     await self.publisher.publish(
                         repo,
@@ -133,6 +139,7 @@ class SubmissionService:
                         f"{self.pages_host}/{event_key}/"
                         f"{self.public_index.work_url(participant.participant_key, selected_topic.key, gallery_file)}"
                     ),
+                    overtime=overtime,
                 )
             finally:
                 if backup and Path(backup).exists():

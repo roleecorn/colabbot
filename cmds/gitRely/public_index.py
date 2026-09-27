@@ -139,6 +139,7 @@ class PublicEventIndex:
                     "url": self.work_url(participant_key, topic.key, file_path),
                     "uid": uid,
                     "name": participant.display_name or f"參加者 {uid}",
+                    "overtime": bool(work.get("overtime", False)),
                 }
             )
         return result
@@ -184,6 +185,8 @@ class PublicEventIndex:
         topic: Topic,
         title: str,
         file_path: str = "index.html",
+        *,
+        overtime: bool = False,
     ) -> PublicIndexSnapshot:
         snapshot = self.snapshot(event.public.event_key)
         participant_rows = self._participant_rows_with_avatars(event.private.participants)
@@ -213,6 +216,7 @@ class PublicEventIndex:
                 "url": self.work_url(participant.participant_key, topic.key, file_path),
                 "uid": uid,
                 "name": participant.display_name or f"參加者 {uid}",
+                "overtime": overtime,
             }
         )
         self._write(

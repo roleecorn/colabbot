@@ -405,6 +405,31 @@ class EventCog(Cog_extension):
             allowed_mentions=discord.AllowedMentions.none(),
         )
 
+    async def _post_overtime_status(self, author_id: str) -> None:
+        event = await self.event_service.load_active()
+        if not event.private.discussion_channel_id:
+            raise EventServiceError("尚未設定活動雜談區。")
+        assignments = await self.christmas_service.gift_for(author_id)
+        assignment = next(
+            (item for item in assignments if item.get("giver_id") == str(author_id)),
+            None,
+        )
+        if assignment is None:
+            raise ChristmasServiceError("找不到你的收禮者配對，無法發布超時通知。")
+        recipient = next(
+            (item for item in event.private.participants
+             if item.discord_user_id == str(assignment.get("receiver_id")) and not item.withdrawn),
+            None,
+        )
+        if recipient is None:
+            raise ChristmasServiceError("找不到收禮者資料，無法發布超時通知。")
+        channel_id = int(event.private.discussion_channel_id)
+        channel = self.bot.get_channel(channel_id) or await self.bot.fetch_channel(channel_id)
+        await channel.send(
+            f"[{recipient.registration_number}]的作品有了超時更新。",
+            allowed_mentions=discord.AllowedMentions.none(),
+        )
+
     async def _sync_participant_index(self, participant) -> bool:
         event = await self.event_service.load_active()
         index = self.submission_service.public_index
@@ -480,15 +505,55 @@ class EventCog(Cog_extension):
             if not value or value in topic.name.lower() or value in topic.key.lower()
         ][:25]
 
-    @app_commands.command(name="upload", description="上傳並覆蓋指定題目的作品")
-    @app_commands.describe(file="壓縮檔 (.zip/.rar/.7z)", title="作品標題", topic="題目（單題活動可留空）")
+    @app_commands.command(name="upload", description="上傳並覆蓋指定題目的作品；help 可看說明")
+    @app_commands.describe(
+        file="壓縮檔 (.zip/.rar/.7z)", title="作品標題",
+        topic="題目（單題活動可留空）", help="顯示上傳格式與限制",
+    )
     @app_commands.autocomplete(topic=_topic_autocomplete)
     async def upload(
+        self,
+        interaction: discord.Interaction,
+        file: Optional[discord.Attachment] = None,
+        title: Optional[str] = None,
+        topic: Optional[str] = None,
+        help: bool = False,
+    ):
+        if help:
+            await self._send(
+                interaction,
+                "`/upload`：在投稿期間，上傳 .zip/.rar/.7z 壓縮檔並覆蓋指定題目作品。"
+                "需填作品標題；多題活動需選 topic，單題可留空。單檔上限 100 MB。"
+                "再次上傳會完整取代該題目前版本。截止後如需補交或更新，使用 `/uploadovertime`；"
+                "作品會標記為超時投稿。",
+                ephemeral=True,
+            )
+            return
+        if file is None or title is None:
+            await self._error(interaction, "請提供壓縮檔與作品標題；也可使用 `/upload help:true` 查看說明。")
+            return
+        await self._upload_archive(interaction, file, title, topic)
+
+    @app_commands.command(name="uploadovertime", description="投稿截止後上傳或更新作品（標記超時）")
+    @app_commands.describe(file="壓縮檔 (.zip/.rar/.7z)", title="作品標題", topic="題目（單題活動可留空）")
+    @app_commands.autocomplete(topic=_topic_autocomplete)
+    async def upload_overtime(
         self,
         interaction: discord.Interaction,
         file: discord.Attachment,
         title: str,
         topic: Optional[str] = None,
+    ):
+        await self._upload_archive(interaction, file, title, topic, overtime=True)
+
+    async def _upload_archive(
+        self,
+        interaction: discord.Interaction,
+        file: discord.Attachment,
+        title: str,
+        topic: Optional[str],
+        *,
+        overtime: bool = False,
     ):
         Path("uploads").mkdir(parents=True, exist_ok=True)
         if file.size and file.size > 100 * 1024 * 1024:
@@ -504,13 +569,25 @@ class EventCog(Cog_extension):
         try:
             await file.save(temporary)
             result = await self.submission_service.upload_archive(
-                str(interaction.user.id), temporary, topic=topic, title=title
+                str(interaction.user.id), temporary, topic=topic, title=title,
+                overtime=overtime,
             )
-            await self._send(interaction, f"已完成覆蓋式上傳。預覽：{result.preview_url}")
+            message = (
+                f"已完成{'超時' if result.overtime else ''}覆蓋式上傳。預覽：{result.preview_url}"
+            )
+            if overtime:
+                event = await self.event_service.load_active()
+                if event.public.event_type is EventType.CHRISTMAS:
+                    try:
+                        await self._post_overtime_status(str(interaction.user.id))
+                    except Exception:
+                        logger.warning("Could not post overtime submission status", exc_info=True)
+                        message += "\n作品已上傳，但活動雜談區狀態通知失敗，請通知主辦者。"
+            await self._send(interaction, message)
         except (SubmissionServiceError, EventServiceError, OSError, ValueError) as exc:
             await self._error(interaction, self._user_error(exc))
         except Exception as exc:
-            await self._unexpected_error(interaction, "upload", exc)
+            await self._unexpected_error(interaction, "uploadovertime" if overtime else "upload", exc)
         finally:
             temporary.unlink(missing_ok=True)
 

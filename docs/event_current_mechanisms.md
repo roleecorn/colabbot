@@ -33,7 +33,7 @@
 | 檔案 | 主要內容 |
 |---|---|
 | `data/playerHashMap.json` | uid、hashId（隨機 participant_key）、name、可選 image |
-| `data/workUserMap.json` | hashId、topicKey、topic、title、file、url、uid、name |
+| `data/workUserMap.json` | hashId、topicKey、topic、title、file、url、uid、name、overtime |
 
 作品依 uid、題目設定順序排序；上傳或清除會同步這兩份索引。沒有 Discord ID 不等於作者匿名：名稱、代碼和作品網址已能建立作者關聯。這個索引流程目前沒有依 christmas 分流。
 
@@ -124,7 +124,7 @@ EventRepository 使用原子 JSON 替換與程序內鎖，各服務另有 async 
 
 已完成：分活動類型的 `/signup` modal、修改／退出／恢復及固定編號；報名留言與活動雜談通知；私訊 `/blacklist add/view/remove`、活動黑名單額度與獨立截止、主辦者白名單、`/sudo` 黑名單維護與 kick/revertkick。
 
-仍待完成：`/sudo rollgroup`（需要本期實際組活規則）、`/sudo submitcount`、`/uploadovertime`、upload help、依收禮者發布作品與缺稿占位、`/guess` 系列與第二高排行、結算 CSV、揭曉及下載。
+仍待完成：`/sudo rollgroup`（需要本期實際組活規則）、`/sudo submitcount`、依收禮者發布作品與缺稿占位、`/guess` 系列與第二高排行、結算 CSV、揭曉及下載。
 
 以上在原始需求文字中已存在，屬於補齊舊需求，不是新提出的業務需求。舊文「沿用去年私信」僅有文字指涉，目前檢視的活動模組不能證明已具備該完整流程。
 
