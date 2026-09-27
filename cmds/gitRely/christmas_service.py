@@ -9,6 +9,7 @@ from typing import Any, Callable
 
 from .event_service import EventService
 from .models import EventType, GiftAssignment
+from .matching.christmas import ChristmasGiftPolicy
 from .matching.protocol import GiftMatchingPolicy
 
 
@@ -20,8 +21,14 @@ class ChristmasService:
     def __init__(self, events: EventService, policy_resolver: Callable[[str], GiftMatchingPolicy] | None = None) -> None:
         self.events = events
         self.repository = events.repository
-        self.policy_resolver = policy_resolver
+        self.policy_resolver = policy_resolver or self._resolve_policy
         self._lock = asyncio.Lock()
+
+    @staticmethod
+    def _resolve_policy(name: str) -> GiftMatchingPolicy:
+        if name == "rules_2026":
+            return ChristmasGiftPolicy()
+        raise ChristmasServiceError(f"找不到配對規則：{name}")
 
     async def _event(self):
         event = await self.events.load_active()
@@ -304,18 +311,25 @@ class ChristmasService:
             raise ChristmasServiceError("尚未設定送禮配對規則，請通知管理員。")
         async with self._lock:
             existing = self.repository.load_auxiliary(event.public.event_key, "gift-assignments.json", None)
-            if existing is not None:
+            now = self.events._now(event.public, self.events.clock)
+            locked = (
+                now >= event.private.registration_ends_at
+                and event.private.blacklist_ends_at is not None
+                and now >= event.private.blacklist_ends_at
+            )
+            if existing is not None and locked:
                 raise ChristmasServiceError("送禮配對已存在，為避免覆蓋既有結果，拒絕重新抽籤。")
             active_participants = [
                 item for item in event.private.participants if not item.withdrawn
             ]
             policy = self.policy_resolver(event.private.matching_policy)
+            blocked_edges = await self._gift_blocked_edges()
             assignments = policy.generate(
                 active_participants,
-                await self._blocked_edges(),
+                blocked_edges,
                 config or {},
             )
-            self._validate_assignments(active_participants, assignments, await self._blocked_edges())
+            self._validate_assignments(active_participants, assignments, blocked_edges)
             result = {
                 "schema_version": 1,
                 "matching_policy": event.private.matching_policy,
@@ -328,6 +342,16 @@ class ChristmasService:
     @staticmethod
     def _validate_assignments(participants, assignments, blocked_edges) -> None:
         participant_ids = {item.discord_user_id for item in participants}
+        giver_ids = [item.giver_id for item in assignments if isinstance(item, GiftAssignment)]
+        receiver_ids = [item.receiver_id for item in assignments if isinstance(item, GiftAssignment)]
+        if (
+            len(giver_ids) != len(participant_ids)
+            or set(giver_ids) != participant_ids
+            or len(set(giver_ids)) != len(giver_ids)
+            or set(receiver_ids) != participant_ids
+            or len(set(receiver_ids)) != len(receiver_ids)
+        ):
+            raise ChristmasServiceError("送禮配對必須讓每位參加者恰好送出及收到一份禮物。")
         for assignment in assignments:
             if not isinstance(assignment, GiftAssignment):
                 raise ChristmasServiceError("送禮配對規則回傳了無效結果，請通知管理員。")
@@ -335,6 +359,23 @@ class ChristmasService:
                 raise ChristmasServiceError("送禮配對結果包含未知參加者，請通知管理員。")
             if (assignment.giver_id, assignment.receiver_id) in blocked_edges:
                 raise ChristmasServiceError("送禮配對結果違反黑名單限制，請通知管理員。")
+            if assignment.giver_id == assignment.receiver_id:
+                raise ChristmasServiceError("送禮配對結果包含自己配對，請通知管理員。")
+
+    async def _gift_blocked_edges(self) -> set[tuple[str, str]]:
+        event = await self._event()
+        data = self.repository.load_auxiliary(event.public.event_key, "blacklist.json", {})
+        if not isinstance(data, dict):
+            raise ChristmasServiceError("黑名單資料異常，請通知管理員。")
+        blocked: set[tuple[str, str]] = set()
+        for owner, values in data.items():
+            if not isinstance(values, list):
+                raise ChristmasServiceError("黑名單資料異常，請通知管理員。")
+            for value in values:
+                owner, value = str(owner), str(value)
+                blocked.add((owner, value))
+                blocked.add((value, owner))
+        return blocked
 
     async def gift_for(self, user_id: str) -> list[dict[str, Any]]:
         event = await self._event()
@@ -346,3 +387,10 @@ class ChristmasService:
             raise ChristmasServiceError("送禮配對資料異常，請通知管理員。")
         user_id = str(user_id)
         return [item for item in assignments if item.get("giver_id") == user_id or item.get("receiver_id") == user_id]
+
+    async def all_gift_assignments(self) -> list[dict[str, Any]]:
+        event = await self._event()
+        data = self.repository.load_auxiliary(event.public.event_key, "gift-assignments.json", None)
+        if not isinstance(data, dict) or not isinstance(data.get("assignments"), list):
+            raise ChristmasServiceError("目前還沒有可公開的送禮配對結果。")
+        return data["assignments"]
