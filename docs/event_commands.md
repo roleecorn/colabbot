@@ -48,8 +48,9 @@ Christmas 專用指令會集中在 `/christmas` 群組下：
 | `/christmas blacklist` | 舊指令，停用 | 相容入口，會提示改用頂層 `/blacklist` 操作。 |
 | `/christmas anonsay` | `content` | 匿名發言；作者只保存於私密資料。 |
 | `/christmas anonreply` | `message_id`、`content` | 匿名回覆指定訊息。 |
-| `/christmas giftshuffle` | 無 | 管理員依活動指定策略產生一次配對；已有結果時拒絕重抽。 |
+| `/christmas giftshuffle` | 無 | 主辦者依活動規則隨機配對；黑名單與報名截止時間均結束後，只允許第一次成功結果。 |
 | `/christmas giftme` | 無 | 查看配對策略允許目前使用者看到的結果。 |
+| `/christmas publishworks` | `channel` | 投稿截止後依收禮者編號公開作品；缺稿顯示「被咕了」，不公開作者編號或暱稱。 |
 
 ## 報名表單欄位
 

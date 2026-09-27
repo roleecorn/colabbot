@@ -275,15 +275,15 @@ https://aafanclubdc.github.io/<event_key>/pieces/<participant_key>/<topic_key>/
   /blacklist remove registration_number:<報名編號>
   /christmas giftshuffle
   /christmas giftme
+  /christmas publishworks channel:<作品連結頻道>
 ```
 
 操作規則：
 
 - 黑名單 add/view/remove 需私訊機器人，並以報名編號操作；管理員用 `/setblacklistsettings` 設定截止及名額。截止後所有三個操作都會被拒絕。
 - 匿名作者、匿名訊息、黑名單與配對結果只寫入 private data。
-- `/giftshuffle` 有既有結果時會拒絕重抽，避免覆蓋已通知的配對。
-- 目前尚未註冊 `rules_2026` 配對策略，因此在配對策略完成前，`/giftshuffle` 預期會失敗；
-  不要把失敗當成活動設定或參加者名單遺失。
+- `/giftshuffle` 使用有上限的隨機重骰，排除自配及任一方向的黑名單；兩個截止時間都過後，只允許第一次成功結果。
+- 投稿截止後由主辦者使用 `/christmas publishworks` 發佈至指定頻道；作品清單以收禮者為序，作者資料不寫入 Christmas 公開索引。
 
 ## 9. 活動結束 checklist
 

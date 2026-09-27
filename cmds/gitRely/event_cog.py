@@ -877,6 +877,76 @@ class EventCog(Cog_extension):
         except Exception as exc:
             await self._unexpected_error(interaction, "giftme", exc)
 
+    @christmas_group.command(name="publishworks", description="依收禮者編號公開 Christmas 投稿作品")
+    @app_commands.describe(channel="作品連結公開頻道")
+    async def publish_christmas_works(
+        self, interaction: discord.Interaction, channel: discord.TextChannel
+    ):
+        if not await self._is_event_host(interaction):
+            await self._error(interaction, "只有目前活動的主辦人可以公開作品。")
+            return
+        await interaction.response.defer(thinking=True, ephemeral=True)
+        try:
+            event = await self.event_service.load_active()
+            if datetime.now(event.private.submission_ends_at.tzinfo) < event.private.submission_ends_at:
+                raise ChristmasServiceError("投稿截止後才能公開作品。")
+            assignments = await self.christmas_service.all_gift_assignments()
+            authors = {
+                item.discord_user_id: item for item in event.private.participants
+                if not item.withdrawn
+            }
+            works_path = self.submission_service.public_index._paths(
+                event.public.event_key
+            )[1]
+            works = await asyncio.to_thread(
+                self.submission_service.public_index._read_list, works_path
+            )
+            published = 0
+            for assignment in assignments:
+                author = authors.get(str(assignment.get("giver_id")))
+                recipient = authors.get(str(assignment.get("receiver_id")))
+                if author is None or recipient is None:
+                    continue
+                author_works = sorted(
+                    (work for work in works if work.get("hashId") == author.participant_key),
+                    key=lambda work: str(work.get("topic", "")),
+                )
+                if not author_works:
+                    await channel.send(
+                        f"[{recipient.registration_number}][{recipient.display_name}]被咕了。",
+                        allowed_mentions=discord.AllowedMentions.none(),
+                    )
+                    published += 1
+                    continue
+                for work in author_works:
+                    overtime_label = "（超時投稿）" if work.get("overtime") else ""
+                    work_path = self.submission_service.public_index.work_url(
+                        author.participant_key,
+                        str(work.get("topicKey", "")),
+                        str(work.get("file", "index.html")),
+                    )
+                    url = (
+                        f"{self.submission_service.pages_host}/"
+                        f"{event.public.event_key}/{work_path}"
+                    )
+                    content = (
+                        "-----\n"
+                        f"[{recipient.registration_number}][{str(work.get('title', ''))[:300]}] / "
+                        f"致：[{recipient.display_name}]{overtime_label}\n"
+                        "第二多猜測：無\n"
+                        f"{url}\n-----"
+                    )
+                    await channel.send(
+                        content,
+                        allowed_mentions=discord.AllowedMentions.none(),
+                    )
+                    published += 1
+            await self._send(interaction, f"已在 {channel.mention} 公開 {published} 則作品留言。", ephemeral=True)
+        except (ChristmasServiceError, EventServiceError, OSError, ValueError) as exc:
+            await self._error(interaction, self._user_error(exc))
+        except Exception as exc:
+            await self._unexpected_error(interaction, "christmas publishworks", exc)
+
 
 class SignupModal(discord.ui.Modal):
     def __init__(self, cog: EventCog, event_type: EventType, participant=None) -> None:

@@ -8,7 +8,7 @@ from pathlib import PurePosixPath
 from typing import Any
 from urllib.parse import quote
 
-from .models import Event, Participant, Topic
+from .models import Event, EventType, Participant, Topic
 from .repositories import atomic_write_json, read_json
 
 
@@ -108,6 +108,8 @@ class PublicEventIndex:
         works: list[dict[str, Any]],
         participants: list[Participant],
         topics: list[Topic],
+        *,
+        hide_authors: bool = False,
     ) -> list[dict[str, Any]]:
         rows_by_key = {
             participant.participant_key: (participant.registration_number, participant)
@@ -129,19 +131,19 @@ class PublicEventIndex:
             if not title:
                 continue
             file_path = str(work.get("file", "index.html"))
-            result.append(
-                {
-                    "hashId": participant_key,
-                    "topicKey": topic.key,
-                    "topic": topic.name,
-                    "title": title,
-                    "file": file_path,
-                    "url": self.work_url(participant_key, topic.key, file_path),
-                    "uid": uid,
-                    "name": participant.display_name or f"參加者 {uid}",
-                    "overtime": bool(work.get("overtime", False)),
-                }
-            )
+            row = {
+                "hashId": participant_key,
+                "topicKey": topic.key,
+                "topic": topic.name,
+                "title": title,
+                "file": file_path,
+                "url": self.work_url(participant_key, topic.key, file_path),
+                "overtime": bool(work.get("overtime", False)),
+            }
+            if not hide_authors:
+                row["uid"] = uid
+                row["name"] = participant.display_name or f"參加者 {uid}"
+            result.append(row)
         return result
 
     def _sort_works(self, works: list[dict[str, Any]], topics: list[Topic]) -> list[dict[str, Any]]:
@@ -168,12 +170,14 @@ class PublicEventIndex:
         """Refresh public participant names and icons without changing works."""
         snapshot = self.snapshot(event.public.event_key)
         _, work_path = self._paths(event.public.event_key)
+        hide_authors = event.public.event_type is EventType.CHRISTMAS
         works = self._normalise_works(
-            self._read_list(work_path), event.private.participants, event.public.topics
+            self._read_list(work_path), event.private.participants, event.public.topics,
+            hide_authors=hide_authors,
         )
         self._write(
             event,
-            self._participant_rows_with_avatars(event.private.participants),
+            [] if hide_authors else self._participant_rows_with_avatars(event.private.participants),
             self._sort_works(works, event.public.topics),
         )
         return snapshot
@@ -189,13 +193,16 @@ class PublicEventIndex:
         overtime: bool = False,
     ) -> PublicIndexSnapshot:
         snapshot = self.snapshot(event.public.event_key)
-        participant_rows = self._participant_rows_with_avatars(event.private.participants)
-        participant_keys = {row["hashId"] for row in participant_rows}
+        hide_authors = event.public.event_type is EventType.CHRISTMAS
+        participant_keys = {
+            item.participant_key for item in event.private.participants if not item.withdrawn
+        }
         if participant.withdrawn or participant.participant_key not in participant_keys:
             raise ValueError("participant is not in the event participant list")
         _, work_path = self._paths(event.public.event_key)
         works = self._normalise_works(
-            self._read_list(work_path), event.private.participants, event.public.topics
+            self._read_list(work_path), event.private.participants, event.public.topics,
+            hide_authors=hide_authors,
         )
         works = [
             work
@@ -206,22 +213,22 @@ class PublicEventIndex:
             )
         ]
         uid = participant.registration_number
-        works.append(
-            {
-                "hashId": participant.participant_key,
-                "topicKey": topic.key,
-                "topic": topic.name,
-                "title": title.strip(),
-                "file": file_path,
-                "url": self.work_url(participant.participant_key, topic.key, file_path),
-                "uid": uid,
-                "name": participant.display_name or f"參加者 {uid}",
-                "overtime": overtime,
-            }
-        )
+        row = {
+            "hashId": participant.participant_key,
+            "topicKey": topic.key,
+            "topic": topic.name,
+            "title": title.strip(),
+            "file": file_path,
+            "url": self.work_url(participant.participant_key, topic.key, file_path),
+            "overtime": overtime,
+        }
+        if not hide_authors:
+            row["uid"] = uid
+            row["name"] = participant.display_name or f"參加者 {uid}"
+        works.append(row)
         self._write(
             event,
-            participant_rows,
+            [] if hide_authors else self._participant_rows_with_avatars(event.private.participants),
             self._sort_works(works, event.public.topics),
         )
         return snapshot
@@ -229,9 +236,11 @@ class PublicEventIndex:
     def remove_work(self, event: Event, participant: Participant, topic: Topic) -> PublicIndexSnapshot:
         snapshot = self.snapshot(event.public.event_key)
         _, work_path = self._paths(event.public.event_key)
-        participant_rows = self._participant_rows_with_avatars(event.private.participants)
+        hide_authors = event.public.event_type is EventType.CHRISTMAS
+        participant_rows = [] if hide_authors else self._participant_rows_with_avatars(event.private.participants)
         works = self._normalise_works(
-            self._read_list(work_path), event.private.participants, event.public.topics
+            self._read_list(work_path), event.private.participants, event.public.topics,
+            hide_authors=hide_authors,
         )
         works = [
             work
