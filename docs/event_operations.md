@@ -275,8 +275,10 @@ https://aafanclubdc.github.io/<event_key>/pieces/<participant_key>/<topic_key>/
   /blacklist remove registration_number:<報名編號>
   /christmas giftshuffle
   /christmas giftme
+  /christmas finalize
   /group view
   /group viewall
+  /group downloadall
   /guess set recipient_number:<編號> author_number:<編號或 0>
   /guess viewall
   /guess seeinvalid
@@ -290,6 +292,7 @@ https://aafanclubdc.github.io/<event_key>/pieces/<participant_key>/<topic_key>/
 - 匿名作者、匿名訊息、黑名單與配對結果只寫入 private data。
 - `/giftshuffle` 使用有上限的隨機重骰，排除自配及任一方向的黑名單；兩個截止時間都過後，只允許第一次成功結果。
 - 投稿截止後由主辦者使用 `/christmas publishworks` 發佈至指定頻道；作品清單以收禮者為序，作者資料不寫入 Christmas 公開索引。
+- 活動結束後主辦者執行 `/christmas finalize` 鎖定猜測並取得 CSV；參加者之後可私訊 `/group downloadall` 下載結算表。
 
 ## 9. 活動結束 checklist
 

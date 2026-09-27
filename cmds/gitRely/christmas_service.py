@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import csv
+import io
 import secrets
 from datetime import datetime
 from typing import Any, Callable
@@ -474,6 +476,11 @@ class ChristmasService:
         if author_number != 0 and author_number not in numbers:
             raise ChristmasServiceError("猜測作者編號不在目前有效報名名單中。")
         async with self._lock:
+            final = self.repository.load_auxiliary(
+                event.public.event_key, "guess-scores.json", None
+            )
+            if final is not None:
+                raise ChristmasServiceError("猜測已鎖定，活動結算後不能再修改。")
             guesses = self._load_guesses(event)
             old = self._second_guess(event, guesses, recipient_number)
             by_recipient = guesses.setdefault(str(owner_id), {})
@@ -574,3 +581,92 @@ class ChristmasService:
         if not isinstance(entries, list):
             raise ChristmasServiceError("作品留言對照資料異常，請通知管理員。")
         return [item for item in entries if isinstance(item, dict)]
+
+    async def guess_owner_ids(self) -> set[str]:
+        event = await self._event()
+        guesses = self._load_guesses(event)
+        return set(guesses) | {
+            item.discord_user_id for item in event.private.participants if not item.withdrawn
+        }
+
+    async def finalize_guesses(
+        self, display_names: dict[str, str] | None = None
+    ) -> dict[str, Any]:
+        event = await self._event()
+        now = self.events._now(event.public, self.events.clock)
+        if now < event.private.submission_ends_at:
+            raise ChristmasServiceError("投稿截止後才能結算猜測。")
+        assignments = await self.all_gift_assignments()
+        async with self._lock:
+            existing = self.repository.load_auxiliary(
+                event.public.event_key, "guess-scores.json", None
+            )
+            if existing is not None:
+                raise ChristmasServiceError("猜測已結算，CSV 已產生。")
+            guesses = self._load_guesses(event)
+            active = [item for item in event.private.participants if not item.withdrawn]
+            by_id = {item.discord_user_id: item for item in active}
+            by_number = {item.registration_number: item for item in active}
+            author_by_recipient: dict[int, int] = {}
+            for assignment in assignments:
+                author = by_id.get(str(assignment.get("giver_id")))
+                recipient = by_id.get(str(assignment.get("receiver_id")))
+                if author and recipient:
+                    author_by_recipient[recipient.registration_number] = author.registration_number
+            recipient_numbers = sorted(item.registration_number for item in active)
+            owners = set(guesses) | set(by_id)
+            owner_order = sorted(
+                owners,
+                key=lambda owner_id: (
+                    by_id[owner_id].registration_number if owner_id in by_id else 10**9,
+                    owner_id,
+                ),
+            )
+            rows = []
+            header = ["guess_uid", "nickname", "registration_number", "guessed_own_correct", "score"]
+            header.extend(f"recipient_{number}_author" for number in recipient_numbers)
+            for owner_id in owner_order:
+                owner = by_id.get(owner_id)
+                votes = guesses.get(owner_id, {})
+                score = sum(
+                    int(votes.get(str(number), 0)) == author_by_recipient[number]
+                    for number in recipient_numbers
+                    if str(number) in votes and number in author_by_recipient
+                )
+                own_correct = ""
+                if owner and owner.registration_number in author_by_recipient:
+                    own_guess = votes.get(str(owner.registration_number))
+                    if own_guess == author_by_recipient[owner.registration_number]:
+                        own_correct = "Y"
+                row = [
+                    owner_id,
+                    owner.display_name if owner else (display_names or {}).get(owner_id, ""),
+                    owner.registration_number if owner else "",
+                    own_correct,
+                    score,
+                ]
+                row.extend(int(votes.get(str(number), 0)) for number in recipient_numbers)
+                rows.append(row)
+            output = io.StringIO(newline="")
+            writer = csv.writer(output)
+            writer.writerow(header)
+            writer.writerows(rows)
+            result = {
+                "schema_version": 1,
+                "finalized_at": now.isoformat(),
+                "rows": rows,
+                "csv": output.getvalue(),
+            }
+            self.repository.save_auxiliary(
+                event.public.event_key, "guess-scores.json", result
+            )
+            return result
+
+    async def finalized_guess_csv(self) -> str:
+        event = await self._event()
+        result = self.repository.load_auxiliary(
+            event.public.event_key, "guess-scores.json", None
+        )
+        if not isinstance(result, dict) or not isinstance(result.get("csv"), str):
+            raise ChristmasServiceError("猜測尚未結算，請等待活動結束。")
+        return result["csv"]

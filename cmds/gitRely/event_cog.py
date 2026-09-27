@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import io
 import logging
 import os
 import re
@@ -866,6 +867,39 @@ class EventCog(Cog_extension):
         except Exception as exc:
             await self._unexpected_error(interaction, "giftshuffle", exc)
 
+    @christmas_group.command(name="finalize", description="鎖定猜測並產生結算 CSV")
+    async def finalize_christmas(self, interaction: discord.Interaction):
+        if not await self._is_event_host(interaction):
+            await self._error(interaction, "只有目前活動的主辦人可以結算猜測。")
+            return
+        await interaction.response.defer(thinking=True, ephemeral=True)
+        try:
+            names: dict[str, str] = {}
+            for user_id in await self.christmas_service.guess_owner_ids():
+                if await self.event_service.participant(user_id):
+                    continue
+                user = self.bot.get_user(int(user_id))
+                if user is None:
+                    try:
+                        user = await self.bot.fetch_user(int(user_id))
+                    except discord.HTTPException:
+                        continue
+                names[user_id] = getattr(user, "global_name", None) or user.name
+            result = await self.christmas_service.finalize_guesses(names)
+            file = discord.File(
+                io.BytesIO(result["csv"].encode("utf-8-sig")),
+                filename="christmas-guess-scores.csv",
+            )
+            await interaction.followup.send(
+                f"猜測已鎖定，結算完成，共 {len(result['rows'])} 位猜測者。",
+                file=file,
+                ephemeral=True,
+            )
+        except (ChristmasServiceError, EventServiceError, OSError, ValueError) as exc:
+            await self._error(interaction, self._user_error(exc))
+        except Exception as exc:
+            await self._unexpected_error(interaction, "christmas finalize", exc)
+
     @christmas_group.command(name="giftme", description="查看活動允許公開的配對結果")
     async def gift_me(self, interaction: discord.Interaction):
         try:
@@ -956,6 +990,25 @@ class EventCog(Cog_extension):
             await self._error(interaction, self._user_error(exc))
         except Exception as exc:
             await self._unexpected_error(interaction, "group viewall", exc)
+
+    @group_group.command(name="downloadall", description="下載已結算的所有猜測與計分 CSV")
+    async def group_downloadall(self, interaction: discord.Interaction):
+        if not await self._require_group_dm(interaction):
+            return
+        await interaction.response.defer(thinking=True)
+        try:
+            content = await self.christmas_service.finalized_guess_csv()
+            await interaction.followup.send(
+                "活動猜測與計分表：",
+                file=discord.File(
+                    io.BytesIO(content.encode("utf-8-sig")),
+                    filename="christmas-guess-scores.csv",
+                ),
+            )
+        except (ChristmasServiceError, OSError, ValueError) as exc:
+            await self._error(interaction, self._user_error(exc))
+        except Exception as exc:
+            await self._unexpected_error(interaction, "group downloadall", exc)
 
     async def _require_guess_dm(self, interaction: discord.Interaction) -> bool:
         if interaction.guild is not None:

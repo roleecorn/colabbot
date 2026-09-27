@@ -49,9 +49,11 @@ Christmas 專用指令會集中在 `/christmas` 群組下：
 | `/christmas anonsay` | `content` | 匿名發言；作者只保存於私密資料。 |
 | `/christmas anonreply` | `message_id`、`content` | 匿名回覆指定訊息。 |
 | `/christmas giftshuffle` | 無 | 主辦者依活動規則隨機配對；黑名單與報名截止時間均結束後，只允許第一次成功結果。 |
+| `/christmas finalize` | 無 | 投稿截止且猜測完成後鎖定猜測、計分並產生 CSV（Bot 管理員/主辦者執行）。 |
 | `/christmas giftme` | 無 | 相容入口，只回覆自己的收禮者，不會揭露送禮者。 |
 | `/group view` | 無 | 私訊機器人，查看自己的收禮者報名表。 |
 | `/group viewall` | 無 | 配對／名單鎖定前私訊查看所有配對；鎖定後停用。 |
+| `/group downloadall` | 無 | 私訊下載已結算的猜測與計分 CSV。 |
 | `/guess set` | `recipient_number`、`author_number`（0 移除） | 私訊提交或移除一筆作者猜測。 |
 | `/guess viewall` | 無 | 私訊查看自己的所有猜測。 |
 | `/guess seeinvalid` | 無 | 私訊查看未猜、猜自己或重複猜同一作者的項目。 |
