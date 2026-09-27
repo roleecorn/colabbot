@@ -100,6 +100,14 @@ class EventService:
             discussion_channel_id=(
                 existing_private.discussion_channel_id if existing_private else None
             ),
+            blacklist_ends_at=(existing_private.blacklist_ends_at if existing_private else None),
+            max_blacklist_entries=(
+                existing_private.max_blacklist_entries if existing_private else None
+            ),
+            max_blacklist_leaders=(
+                existing_private.max_blacklist_leaders if existing_private else None
+            ),
+            host_user_ids=list(existing_private.host_user_ids) if existing_private else [],
             participants=list(existing_private.participants) if existing_private else [],
         )
         public.validate()
@@ -270,6 +278,18 @@ class EventService:
             private.blacklist_ends_at = ends_at
             private.max_blacklist_entries = max_entries
             private.max_blacklist_leaders = max_leaders
+            await asyncio.to_thread(self.repository.save_private, private, public)
+
+    async def set_event_hosts(self, user_ids: Iterable[str]) -> None:
+        event = await self.load_active()
+        values = list(dict.fromkeys(str(value).strip() for value in user_ids if str(value).strip()))
+        if any(not value.isdigit() for value in values):
+            raise EventServiceError("主辦者清單只能包含 Discord 使用者 ID。")
+        async with self._lock_for(event.public.event_key):
+            public, private = await asyncio.to_thread(
+                self.repository.load_event, event.public.event_key
+            )
+            private.host_user_ids = values
             await asyncio.to_thread(self.repository.save_private, private, public)
 
     async def leave(self, user_id: str) -> Participant:

@@ -206,6 +206,7 @@ class EventPrivate:
     blacklist_ends_at: datetime | None = None
     max_blacklist_entries: int | None = None
     max_blacklist_leaders: int | None = None
+    host_user_ids: list[str] = field(default_factory=list)
     participants: list[Participant] = field(default_factory=list)
     matching_policy: str | None = None
     schema_version: int = 1
@@ -225,6 +226,12 @@ class EventPrivate:
         ):
             if value is not None and (not isinstance(value, int) or value < 0):
                 raise ValueError(f"{name} must be a non-negative integer")
+        if not isinstance(self.host_user_ids, list) or any(
+            not isinstance(value, str) or not value.isdigit() for value in self.host_user_ids
+        ):
+            raise ValueError("host_user_ids must be a list of Discord user ID strings")
+        if len(self.host_user_ids) != len(set(self.host_user_ids)):
+            raise ValueError("host_user_ids must be unique")
         dates = [
             self.registration_starts_at,
             self.registration_ends_at,
@@ -263,6 +270,9 @@ class EventPrivate:
         raw_participants = data.get("participants", [])
         if not isinstance(raw_participants, list):
             raise ValueError("participants must be a list")
+        raw_hosts = data.get("host_user_ids", [])
+        if not isinstance(raw_hosts, list):
+            raise ValueError("host_user_ids must be a list")
         result = cls(
             event_key=_required_string(data, "event_key"),
             registration_channel_id=_required_string(data, "registration_channel_id"),
@@ -282,6 +292,7 @@ class EventPrivate:
                 int(data["max_blacklist_leaders"])
                 if data.get("max_blacklist_leaders") is not None else None
             ),
+            host_user_ids=[str(value) for value in raw_hosts],
             registration_starts_at=_parse_datetime(
                 data.get("registration_starts_at"), "registration_starts_at"
             ),
@@ -324,6 +335,8 @@ class EventPrivate:
             data["max_blacklist_entries"] = self.max_blacklist_entries
         if self.max_blacklist_leaders is not None:
             data["max_blacklist_leaders"] = self.max_blacklist_leaders
+        if self.host_user_ids:
+            data["host_user_ids"] = list(self.host_user_ids)
         if self.matching_policy:
             data["matching_policy"] = self.matching_policy
         return data

@@ -79,6 +79,13 @@ class EventCog(Cog_extension):
     def _is_admin(self, interaction: discord.Interaction) -> bool:
         return self.bIsAdmin(interaction.user) or self.bIsDeveloper(interaction.user.id)
 
+    async def _is_event_host(self, interaction: discord.Interaction) -> bool:
+        try:
+            event = await self.event_service.load_active()
+        except (OSError, ValueError, EventServiceError):
+            return False
+        return str(interaction.user.id) in event.private.host_user_ids
+
     @staticmethod
     def _parse_datetime(value: str, timezone: str) -> datetime:
         raw = value.strip()
@@ -185,13 +192,31 @@ class EventCog(Cog_extension):
             return
         await self._send(interaction, f"已啟用活動 `{event.public.event_key}`。")
 
+    @app_commands.command(name="seteventadmins", description="更新目前活動主辦人權限名單")
+    @app_commands.describe(user_ids="主辦者 Discord ID 或提及，空白或逗號分隔；留空可清空")
+    async def set_event_admins(self, interaction: discord.Interaction, user_ids: str = ""):
+        if not self._is_admin(interaction):
+            await self._error(interaction, "只有 Bot 管理員可以更新活動主辦人名單。")
+            return
+        parsed = list(dict.fromkeys(re.findall(r"\d{15,20}", user_ids)))
+        if user_ids.strip() and not parsed:
+            await self._error(interaction, "找不到有效的 Discord 使用者 ID。")
+            return
+        try:
+            await self.event_service.set_event_hosts(parsed)
+            await self._send(interaction, f"已更新主辦人名單，共 {len(parsed)} 人。")
+        except (EventServiceError, OSError, ValueError) as exc:
+            await self._error(interaction, self._user_error(exc))
+        except Exception as exc:
+            await self._unexpected_error(interaction, "seteventadmins", exc)
+
     @app_commands.command(name="seteventchannels", description="設定活動雜談區")
     @app_commands.describe(discussion_channel="活動雜談與狀態更新要發送的頻道")
     async def set_event_channels(
         self, interaction: discord.Interaction, discussion_channel: discord.TextChannel
     ):
-        if not self._is_admin(interaction):
-            await self._error(interaction, "只有管理員可以設定活動頻道。")
+        if not await self._is_event_host(interaction):
+            await self._error(interaction, "只有目前活動的主辦人可以設定活動頻道。")
             return
         try:
             await self.event_service.set_discussion_channel(str(discussion_channel.id))
@@ -214,8 +239,8 @@ class EventCog(Cog_extension):
         max_entries: int,
         max_leaders: Optional[int] = None,
     ):
-        if not self._is_admin(interaction):
-            await self._error(interaction, "只有管理員可以設定黑名單規則。")
+        if not await self._is_event_host(interaction):
+            await self._error(interaction, "只有目前活動的主辦人可以設定黑名單規則。")
             return
         try:
             event = await self.event_service.load_active()
@@ -397,8 +422,8 @@ class EventCog(Cog_extension):
 
     @app_commands.command(name="eventsyncicons", description="同步目前活動所有參賽者的 Discord 頭像")
     async def sync_event_icons(self, interaction: discord.Interaction):
-        if not self._is_admin(interaction):
-            await self._error(interaction, "只有管理員可以同步活動頭像。")
+        if not await self._is_event_host(interaction):
+            await self._error(interaction, "只有目前活動的主辦人可以同步活動頭像。")
             return
         await interaction.response.defer(thinking=True, ephemeral=True)
         try:
@@ -605,8 +630,8 @@ class EventCog(Cog_extension):
 
     @christmas_group.command(name="giftshuffle", description="依活動規則產生送禮配對")
     async def gift_shuffle(self, interaction: discord.Interaction):
-        if not self._is_admin(interaction):
-            await self._error(interaction, "需要管理員權限。")
+        if not await self._is_event_host(interaction):
+            await self._error(interaction, "只有目前活動的主辦人可以執行配對。")
             return
         try:
             await interaction.response.defer(ephemeral=True)

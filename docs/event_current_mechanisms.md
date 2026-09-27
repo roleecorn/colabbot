@@ -8,11 +8,11 @@
 |---|---|---|
 | 載入 | 套件、event.py、event_multi.py 都建立同一 EventCog；後兩者是相容入口，不是待合併的舊實作 | `cmds/gitRely/__init__.py`、`event.py`、`event_multi.py` |
 | 活動選擇 | 全域只保存一個 active-event.json；每次服務操作載入目前活動 | `repositories.py:EventRepository`、`event_service.py:load_active` |
-| 活動種類 | submission、christmas；共用 topics 與投稿流程 | `models.py:EventType` |
+| 活動種類 | submission、christmas、group；共用 topics 與投稿流程 | `models.py:EventType` |
 | 設定活動 | `/seteventname` 接受活動名、類型、時區、四個時間與逗號分隔題目；執行頻道記為報名頻道 | `event_cog.py:activate_event` |
 | 更新設定 | 同活動保留 participants；同名題目盡可能沿用 key；切換 active 前驗證設定 | `event_service.py:create_event`、`repositories.py:activate_event` |
 | 時間 | 有時區；強制報名開始 < 報名截止 ≤ 投稿開始 < 投稿截止；依時間推導五個狀態 | `models.py:EventPrivate.validate`、`event_status` |
-| 管理員 | Discord administrator 或寫在程式內的 developer ID，不是每場活動主辦者白名單 | `event_cog.py:_is_admin`、`core/classes.py` |
+| 管理員／主辦人 | `/seteventadmins` 由 Bot 管理員設定當期主辦者 ID；活動操作指令依 private state 白名單檢查 | `event_cog.py:_is_admin`、`_is_event_host`、`event_service.py:set_event_hosts` |
 | 群組限制 | `/event` 明確檢查指定 guild 及報名頻道；其他指令不能據此推定具有相同檢查 | `event_cog.py:event` |
 
 目前 Christmas 模型沒有強制只能一題；架構提案中「聖誕只能一份」不能當作已存在的驗證。

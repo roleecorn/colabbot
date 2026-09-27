@@ -19,6 +19,7 @@ py .\bot2.py --token <TOKEN> --noBase --ext gitRely
 | 指令 | 參數 | 說明 |
 |---|---|---|
 | `/seteventname` | `event_name`、`event_type`、`timezone`、四個時間欄位、`topics` | 驗證並啟用唯一活動；時間接受 ISO datetime 或 `yyyymmdd-HHMM`。 |
+| `/seteventadmins` | `user_ids`（使用者 ID 或提及） | Bot 管理員設定當期主辦者白名單；其餘活動管理指令僅限名單成員。 |
 | `/seteventchannels` | `discussion_channel` | 設定活動雜談區；報名修改、退出及恢復的狀態通知會發到這裡。 |
 | `/setblacklistsettings` | `ends_at`、`max_entries`、`max_leaders`（選填） | 設定黑名單截止時間與每人上限；`max_leaders` 僅能用於組活。 |
 | `/signup` | `action=join/edit/quit/restore` | `join` 開啟活動表單；`edit` 修改欄位並更新原報名留言；`quit` 保留原編號取消；`restore` 用原編號恢復。可在指定伺服器內任何文字頻道使用。 |

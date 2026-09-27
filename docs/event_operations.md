@@ -73,6 +73,7 @@ py .\bot2.py --token <TOKEN> --noBase --ext gitRely
 - [ ] `/seteventname`、`/signup`、`/event`、`/upload`、`/clear` 出現在指令清單。
 - [ ] 確認管理員可用 `/seteventchannels` 設定活動雜談區。
 - [ ] 確認管理員可用 `/setblacklistsettings` 設定黑名單額度與截止時間。
+- [ ] 確認 Bot 管理員可用 `/seteventadmins` 設定本期主辦者名單。
 - [ ] 沒有同時載入 `gitRely.event`、`gitRely.event_multi` 或其他會註冊同名指令的 extension。
 
 若只要直接載入 Cog，也可以使用 `--ext gitRely.event_cog`；兩者擇一即可。
@@ -104,8 +105,7 @@ py .\bot2.py --token <TOKEN> --noBase --ext gitRely
 4. 原子更新 `data/active-event.json`。
 5. 將執行指令的頻道記為 `registration_channel_id`。
 
-之後執行 `/seteventchannels`，選擇活動雜談區，以接收報名修改／退出／恢復通知。
-另執行 `/setblacklistsettings`，設定黑名單截止時間、每人名額，以及組活適用的組長名額。
+接著由 Bot 管理員執行 `/seteventadmins` 設定本期主辦者 ID；之後由名單內的主辦者執行 `/seteventchannels`，選擇活動雜談區，以接收報名修改／退出／恢復通知，並執行 `/setblacklistsettings` 設定黑名單截止時間、每人名額，以及組活適用的組長名額。重新執行 `/seteventname` 會保留這些私密活動設定。
 
 啟用後在本機驗證：
 
@@ -144,7 +144,9 @@ Get-Content .\data\events\2026-spring\event-private.json
 
 ## 5. 報名階段 checklist
 
-管理員在報名開始前：
+主辦者名單由管理員透過 `/seteventadmins` 設定。活動頻道及黑名單設定、頭像同步、Christmas 配對等管理操作僅允許名單成員；活動啟用與名單維護仍由 Bot 管理員執行。
+
+主辦者在報名開始前：
 
 - [ ] 在活動頻道公告報名開始與截止時間。
 - [ ] 公告活動類型與 topic 名稱。
