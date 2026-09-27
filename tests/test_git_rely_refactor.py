@@ -5,6 +5,7 @@ import unittest
 import zipfile
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from cmds.gitRely.event_service import EventService, EventServiceError
@@ -17,6 +18,7 @@ from cmds.gitRely.startup import EventStartupError, validate_active_event_config
 from cmds.gitRely.storage import SubmissionStorage
 from cmds.gitRely.submission_service import SubmissionService, SubmissionServiceError
 from cmds.gitRely.event_cog import EventCog
+from cmds.gitRely.publisher import GitPublishError, GitPublisher
 
 
 TZ = ZoneInfo("Asia/Taipei")
@@ -153,6 +155,77 @@ class EventRefactorTests(unittest.TestCase):
         selected = SubmissionStorage.generate_gallery(root, "ignored title")
         self.assertEqual(selected, root / "index.html")
         self.assertEqual((root / "index.html").read_text(encoding="utf-8"), "index")
+
+    def test_replace_directory_keeps_rollback_backup_outside_public_repository(self):
+        root = Path(self.temp.name)
+        repo = root / "public"
+        target = repo / "pieces" / "participant" / "topic"
+        target.mkdir(parents=True)
+        (target / "old.txt").write_text("old", encoding="utf-8")
+        staged = root / "uploads" / "request" / "submission"
+        staged.mkdir(parents=True)
+        (staged / "new.txt").write_text("new", encoding="utf-8")
+
+        backup = SubmissionStorage(root / "uploads").replace_directory(staged, target)
+
+        self.assertIsNotNone(backup)
+        self.assertEqual(Path(backup).parent, staged.parent)
+        self.assertNotIn(repo, Path(backup).parents)
+        self.assertEqual((target / "new.txt").read_text(encoding="utf-8"), "new")
+        self.assertEqual((Path(backup) / "old.txt").read_text(encoding="utf-8"), "old")
+
+    def test_publisher_excludes_internal_backup_paths_from_git_add(self):
+        publisher = GitPublisher()
+
+        class Completed:
+            returncode = 0
+
+        with patch("cmds.gitRely.publisher.subprocess.run", return_value=Completed()) as run:
+            publisher._publish_sync(Path(self.temp.name), "test")
+
+        self.assertEqual(
+            run.call_args_list[1].args[0],
+            ["git", "add", "--update", "--", "."],
+        )
+        self.assertEqual(
+            run.call_args_list[2].args[0],
+            ["git", "add", "--all", "--", ".", ":(exclude)**/*.backup-*"],
+        )
+
+    def test_publisher_rolls_back_local_commit_when_pull_fails(self):
+        publisher = GitPublisher()
+
+        class Completed:
+            def __init__(self, returncode=0):
+                self.returncode = returncode
+
+        results = iter(
+            [
+                Completed(),  # rev-parse
+                Completed(),  # add --update
+                Completed(),  # add --all
+                Completed(),  # commit
+                Completed(1),  # pull --rebase
+                Completed(),  # reset --mixed
+            ]
+        )
+        def fake_run(*args, **kwargs):
+            process = next(results)
+            if args[0] == ["git", "rev-parse", "HEAD"]:
+                kwargs["stdout"].write(b"before-head\n")
+            return process
+
+        with patch(
+            "cmds.gitRely.publisher.subprocess.run",
+            side_effect=fake_run,
+        ) as run:
+            with self.assertRaises(GitPublishError):
+                publisher._publish_sync(Path(self.temp.name), "test")
+
+        self.assertEqual(
+            run.call_args_list[-1].args[0],
+            ["git", "reset", "--mixed", "before-head"],
+        )
 
     def test_failed_publish_restores_previous_submission(self):
         event = make_event(self.service, "upload")

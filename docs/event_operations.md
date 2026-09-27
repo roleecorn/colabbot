@@ -44,10 +44,12 @@
 啟動前檢查：
 
 - [ ] `python` 可以載入 `discord`。
+- [ ] `python` 已安裝 `rarfile`、`py7zr`；若接受 `.rar` 投稿，執行環境另有
+      UnRAR 或 7-Zip，且可由 PATH 找到，或設定 `RAR_TOOL` 絕對路徑。
 - [ ] `data/`、`uploads/` 可寫入。
 - [ ] 預計使用的 `<event_key>` 目錄是 Git repository：`git -C <event_key> status` 可執行。
 - [ ] `<event_key>` 已設定正確 remote，且 Bot 執行帳號能 push。
-- [ ] 公開 repository 工作樹乾淨；`GitPublisher` 會執行 `git add .`，不要把其他未完成變更留在裡面。
+- [ ] 公開 repository 工作樹乾淨；`GitPublisher` 會加入工作樹變更（但會排除內部 `.backup-*` 目錄），不要把其他未完成變更留在裡面。
 - [ ] `.gitignore` 包含 `data/active-event.json`、`data/events/` 與 `uploads/`。
 - [ ] 已確認 `Asia/Taipei` 等 IANA timezone 名稱可用。
 - [ ] 已備份 `data/events/`。私密資料不在公開 Git 歷史中，遺失後無法從 Pages 還原。

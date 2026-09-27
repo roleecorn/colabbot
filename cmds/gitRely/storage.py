@@ -18,6 +18,45 @@ ARCHIVE_EXTENSIONS = (".zip", ".rar", ".7z")
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".gif", ".webp")
 
 
+def _configure_rar_tool(rarfile_module) -> None:
+    """Configure rarfile from deployment settings and common Windows paths."""
+    candidates: list[str] = []
+    configured = os.environ.get("RAR_TOOL") or os.environ.get("UNRAR_TOOL")
+    if configured:
+        candidates.append(configured)
+
+    for command in ("unrar", "UnRAR.exe", "7z", "7zz", "bsdtar"):
+        resolved = shutil.which(command)
+        if resolved:
+            candidates.append(resolved)
+
+    program_roots = {
+        value
+        for variable in ("ProgramFiles", "ProgramW6432", "LOCALAPPDATA")
+        if (value := os.environ.get(variable))
+    }
+    for root in program_roots:
+        candidates.extend(
+            str(Path(root) / relative)
+            for relative in (
+                Path("WinRAR") / "UnRAR.exe",
+                Path("7-Zip") / "7z.exe",
+                Path("7-Zip") / "7zz.exe",
+            )
+        )
+
+    tool = next((candidate for candidate in candidates if Path(candidate).is_file()), None)
+    if tool:
+        # rarfile selects the first compatible backend. Setting all tool
+        # constants lets an absolute RAR_TOOL point to either UnRAR or 7-Zip.
+        rarfile_module.UNRAR_TOOL = tool
+        rarfile_module.UNAR_TOOL = tool
+        rarfile_module.SEVENZIP_TOOL = tool
+        rarfile_module.SEVENZIP2_TOOL = tool
+        rarfile_module.BSDTAR_TOOL = tool
+    rarfile_module.tool_setup(force=True)
+
+
 def safe_component(value: str, *, label: str = "path component") -> str:
     value = str(value).strip()
     if not value or value in {".", ".."} or "/" in value or "\\" in value:
@@ -123,15 +162,21 @@ class SubmissionStorage:
                     import rarfile
                 except ImportError as exc:
                     raise RuntimeError("RAR extraction requires the rarfile package") from exc
-                with rarfile.RarFile(source) as archive_file:
-                    members = archive_file.infolist()
-                    files = [item for item in members if not item.isdir()]
-                    self._validate_members((item.filename, item.file_size) for item in files)
-                    for info in files:
-                        relative = _safe_member_name(info.filename)
-                        target = _ensure_within(destination, relative)
-                        with archive_file.open(info) as source_file:
-                            _write_member(source_file, target, self.max_uncompressed_bytes, total)
+                try:
+                    _configure_rar_tool(rarfile)
+                    with rarfile.RarFile(source) as archive_file:
+                        members = archive_file.infolist()
+                        files = [item for item in members if not item.isdir()]
+                        self._validate_members((item.filename, item.file_size) for item in files)
+                        for info in files:
+                            relative = _safe_member_name(info.filename)
+                            target = _ensure_within(destination, relative)
+                            with archive_file.open(info) as source_file:
+                                _write_member(source_file, target, self.max_uncompressed_bytes, total)
+                except rarfile.RarCannotExec as exc:
+                    raise RuntimeError(
+                        "RAR extraction requires UnRAR or 7-Zip; install one or set RAR_TOOL"
+                    ) from exc
             else:
                 try:
                     import py7zr
@@ -234,7 +279,10 @@ class SubmissionStorage:
         if target_path.exists():
             if not target_path.is_dir():
                 raise ValueError(f"submission target is not a directory: {target_path}")
-            backup = target_path.parent / f".{target_path.name}.backup-{uuid.uuid4().hex}"
+            # Keep the rollback copy in the request-local staging directory.
+            # The target lives in a public Git repository, so placing the
+            # backup beside it would make ``git add .`` see an internal file.
+            backup = staged_path.parent / f".{target_path.name}.backup-{uuid.uuid4().hex}"
             os.replace(target_path, backup)
         try:
             os.replace(staged_path, target_path)

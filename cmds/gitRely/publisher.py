@@ -8,6 +8,9 @@ import tempfile
 from pathlib import Path
 
 
+_BACKUP_PATHSPEC = ":(exclude)**/*.backup-*"
+
+
 class GitPublishError(RuntimeError):
     """Raised when the public repository could not be published."""
 
@@ -41,15 +44,34 @@ class GitPublisher:
                 details = output.read().decode("utf-8", errors="replace")
             return process.returncode, details
 
+        before_head: str | None = None
+        commit_created = False
         try:
-            return_code, details = run("add", ".")
+            return_code, details = run("rev-parse", "HEAD")
+            if return_code != 0:
+                raise GitPublishError(details.strip() or "git rev-parse failed")
+            before_head = details.strip()
+
+            # First stage changes to paths that Git already tracks.  This also
+            # removes old backup files that were accidentally committed by an
+            # earlier version of the publisher.
+            return_code, details = run("add", "--update", "--", ".")
+            if return_code != 0:
+                raise GitPublishError(details.strip() or "git add --update failed")
+
+            # New rollback backups are outside the public repository.  Keep
+            # this exclusion for any stale, untracked backup left by an
+            # interrupted request, but do not exclude tracked deletions above.
+            return_code, details = run("add", "--all", "--", ".", _BACKUP_PATHSPEC)
             if return_code != 0:
                 raise GitPublishError(details.strip() or "git add failed")
 
             return_code, details = run("commit", "-m", message)
             # A clean tree is not an error; pull/push still keeps the branch up
             # to date and gives callers a successful publish result.
-            if return_code != 0 and "nothing to commit" not in details.lower():
+            if return_code == 0:
+                commit_created = True
+            elif "nothing to commit" not in details.lower():
                 raise GitPublishError(details.strip() or "git commit failed")
 
             return_code, details = run("pull", "--rebase")
@@ -59,7 +81,21 @@ class GitPublisher:
             return_code, details = run("push")
             if return_code != 0:
                 raise GitPublishError(details.strip() or "git push failed")
-        except (OSError, subprocess.SubprocessError) as exc:
+        except (GitPublishError, OSError, subprocess.SubprocessError) as exc:
+            if commit_created and before_head:
+                try:
+                    reset_code, reset_details = run("reset", "--mixed", before_head)
+                except (OSError, subprocess.SubprocessError) as reset_exc:
+                    raise GitPublishError(
+                        f"{exc}; additionally failed to roll back local commit: {reset_exc}"
+                    ) from exc
+                if reset_code != 0:
+                    raise GitPublishError(
+                        f"{exc}; additionally failed to roll back local commit: "
+                        f"{reset_details.strip() or 'git reset failed'}"
+                    ) from exc
+            if isinstance(exc, GitPublishError):
+                raise
             raise GitPublishError(str(exc)) from exc
 
     async def publish(self, repo_path: str | Path, message: str) -> None:

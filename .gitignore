@@ -3,6 +3,10 @@ corn.py
 *.zip
 *.ipynb
 __pycache__/
+群活动机器人需求.txt
+# Temporary upload staging and rollback directories.
+uploads/
+*.backup-*/
 # Event participant mappings, anonymous messages, blacklists and gift results
 # are private runtime data and must never enter a public event repository.
 data/active-event.json
