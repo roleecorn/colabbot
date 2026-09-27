@@ -20,6 +20,11 @@ parser.add_argument(
     action="store_false",
     dest="load_base",
 )
+parser.add_argument(
+    "--test-mode",
+    help="Allow event signup in any Discord server using isolated local test data (no Git push)",
+    action="store_true",
+)
 args = parser.parse_args()
 formatter = '%(levelname)s %(asctime)s %(message)s'
 # logging.basicConfig(filename="bot.log",  level=logging.warning,format=formatter, datefmt='%m/%d/%Y %I:%M:%S %p')
@@ -43,6 +48,7 @@ formatter = '%(levelname)s %(asctime)s %(message)s'
 intents = discord.Intents.all()
 intents.members = True
 bot = commands.Bot(intents=intents, command_prefix='&&', help_command=None)
+bot.test_mode = args.test_mode
 # bot = commands.Bot(intents=intents,command_prefix='&&')
 
 
@@ -151,6 +157,11 @@ if __name__ == "__main__":
 
     # print(botdata["token"])
     logging.warning('Start the bot')
+    if args.test_mode:
+        logging.warning(
+            'TEST MODE enabled: signup is allowed in any guild; '
+            'event data is isolated under test-mode-data/ and test-mode-public/; Git publishing is disabled.'
+        )
     token = args.token
     extension = []
     if(args.ext):
@@ -164,7 +175,14 @@ if __name__ == "__main__":
                 for ext in extension:
                     await load_extensions(ext)
             try:
-                validate_active_event_configuration()
+                if args.test_mode:
+                    from cmds.gitRely.repositories import EventRepository
+                    repository = EventRepository(
+                        data_root="test-mode-data", public_root="test-mode-public"
+                    )
+                    validate_active_event_configuration(repository)
+                else:
+                    validate_active_event_configuration()
             except EventStartupError as exc:
                 logging.critical(str(exc))
                 raise SystemExit(1) from exc

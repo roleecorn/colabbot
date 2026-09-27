@@ -19,7 +19,7 @@ from cmds.gitRely.startup import EventStartupError, validate_active_event_config
 from cmds.gitRely.storage import SubmissionStorage
 from cmds.gitRely.submission_service import SubmissionService, SubmissionServiceError
 from cmds.gitRely.event_cog import EventCog
-from cmds.gitRely.publisher import GitPublishError, GitPublisher
+from cmds.gitRely.publisher import GitPublishError, GitPublisher, LocalOnlyPublisher
 from core.classes import Cog_extension, GUILD_ID
 
 
@@ -98,6 +98,21 @@ class EventRefactorTests(unittest.TestCase):
         self.assertFalse(
             Cog_extension.bIsAAFanclub(SimpleNamespace(guild=SimpleNamespace(id=123)))
         )
+        test_client = SimpleNamespace(test_mode=True)
+        self.assertTrue(
+            Cog_extension.bIsAAFanclub(
+                SimpleNamespace(guild=SimpleNamespace(id=123), client=test_client)
+            )
+        )
+        self.assertFalse(
+            Cog_extension.bIsAAFanclub(SimpleNamespace(guild=None, client=test_client))
+        )
+
+    def test_test_mode_event_cog_uses_isolated_storage_and_local_publisher(self):
+        cog = EventCog(SimpleNamespace(test_mode=True))
+        self.assertEqual(cog.repository.data_root, Path("test-mode-data"))
+        self.assertEqual(cog.repository.public_root, Path("test-mode-public"))
+        self.assertIsInstance(cog.submission_service.publisher, LocalOnlyPublisher)
 
     def test_christmas_commands_are_registered_under_one_group(self):
         self.assertEqual(EventCog.christmas_group.name, "christmas")

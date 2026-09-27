@@ -20,4 +20,9 @@ class Cog_extension(commands.Cog):
     @staticmethod
     def bIsAAFanclub(ctx: Context | discord.Interaction) -> bool:
         guild = getattr(ctx, "guild", None)
+        if guild is None:
+            return False
+        client = getattr(ctx, "client", None) or getattr(ctx, "bot", None)
+        if getattr(client, "test_mode", False):
+            return True
         return guild is not None and guild.id == GUILD_ID

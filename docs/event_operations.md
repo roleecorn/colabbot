@@ -78,6 +78,16 @@ py .\bot2.py --token <TOKEN> --noBase --ext gitRely
 
 若只要直接載入 Cog，也可以使用 `--ext gitRely.event_cog`；兩者擇一即可。
 
+如需在 AA Fanclub 以外的伺服器測試報名互動，可額外加上 `--test-mode`：
+
+```powershell
+py .\bot2.py --token <TEST_BOT_TOKEN> --noBase --ext gitRely --test-mode
+```
+
+測試模式只允許在其他 Discord 伺服器使用，不允許私訊報名；活動資料分別存於
+`test-mode-data/` 與 `test-mode-public/`，不會讀寫正式活動資料或推送 GitHub。啟動後須在測試伺服器
+重新執行 `/seteventname` 建立測試活動。作品預覽網址使用 `test.invalid`，不會發布到正式 Pages。
+
 ## 3. 建立並啟用活動
 
 由管理員在「活動報名頻道」執行 `/seteventname`。目前所有設定欄位都是必填：

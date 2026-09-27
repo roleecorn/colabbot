@@ -25,7 +25,7 @@ from .event_service import EventService, EventServiceError
 from .models import EventType
 from .repositories import EventRepository
 from .submission_service import SubmissionService, SubmissionServiceError
-from .publisher import GitPublishError
+from .publisher import GitPublishError, LocalOnlyPublisher
 
 logger = logging.getLogger(__name__)
 
@@ -62,9 +62,17 @@ class EventCog(Cog_extension):
         christmas_service: ChristmasService | None = None,
     ) -> None:
         super().__init__(bot)
-        self.repository = repository or EventRepository()
+        test_mode = bool(getattr(bot, "test_mode", False))
+        self.repository = repository or EventRepository(
+            data_root="test-mode-data" if test_mode else "data",
+            public_root="test-mode-public" if test_mode else ".",
+        )
         self.event_service = event_service or EventService(self.repository)
-        self.submission_service = submission_service or SubmissionService(self.event_service)
+        self.submission_service = submission_service or SubmissionService(
+            self.event_service,
+            publisher=LocalOnlyPublisher() if test_mode else None,
+            pages_host="https://test.invalid" if test_mode else "https://aafanclubdc.github.io",
+        )
         self.christmas_service = christmas_service or ChristmasService(self.event_service)
         self.avatar_service = AvatarService(self.event_service)
 

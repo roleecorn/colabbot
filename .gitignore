@@ -11,3 +11,5 @@ uploads/
 # are private runtime data and must never enter a public event repository.
 data/active-event.json
 data/events/
+test-mode-data/
+test-mode-public/

@@ -15,6 +15,13 @@ class GitPublishError(RuntimeError):
     """Raised when the public repository could not be published."""
 
 
+class LocalOnlyPublisher:
+    """Accept local test-mode updates without contacting a Git remote."""
+
+    async def publish(self, repo_path: str | Path, message: str) -> None:
+        return None
+
+
 class GitPublisher:
     _locks: dict[Path, asyncio.Lock] = {}
 
