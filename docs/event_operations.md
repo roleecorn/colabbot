@@ -263,14 +263,16 @@ https://aafanclubdc.github.io/<event_key>/pieces/<participant_key>/<topic_key>/
 ```text
   /christmas anonsay content:<內容>
   /christmas anonreply message_id:<訊息 ID 或連結> content:<內容>
-  /christmas blacklist ids:<以空白分隔的 Discord ID>
+  /blacklist add registration_number:<報名編號>
+  /blacklist view
+  /blacklist remove registration_number:<報名編號>
   /christmas giftshuffle
   /christmas giftme
 ```
 
 操作規則：
 
-- `/blacklist` 是完整覆蓋；傳入空白清單可清除自己的黑名單。
+- 黑名單 add/view/remove 需私訊機器人，並以報名編號操作；每場活動額度與獨立截止時間設定仍待完成。
 - 匿名作者、匿名訊息、黑名單與配對結果只寫入 private data。
 - `/giftshuffle` 有既有結果時會拒絕重抽，避免覆蓋已通知的配對。
 - 目前尚未註冊 `rules_2026` 配對策略，因此在配對策略完成前，`/giftshuffle` 預期會失敗；

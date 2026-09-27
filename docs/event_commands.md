@@ -22,6 +22,9 @@ py .\bot2.py --token <TOKEN> --noBase --ext gitRely
 | `/seteventchannels` | `discussion_channel` | 設定活動雜談區；報名修改、退出及恢復的狀態通知會發到這裡。 |
 | `/signup` | `action=join/edit/quit/restore` | `join` 開啟活動表單；`edit` 修改欄位並更新原報名留言；`quit` 保留原編號取消；`restore` 用原編號恢復。可在指定伺服器內任何文字頻道使用。 |
 | `/event` | `action=join/edit/leave/restore` | `/signup` 的相容入口；`leave` 等同 `quit`。 |
+| `/blacklist add` | `registration_number` | 私訊機器人，依報名編號加入黑名單。 |
+| `/blacklist view` | 無 | 私訊機器人，查看黑名單編號與暱稱。 |
+| `/blacklist remove` | `registration_number` | 私訊機器人，移除指定編號。 |
 | `/upload` | `file`、`title` 必填；`topic` 單題時可留空 | 安全解壓、建立預覽並完整覆蓋指定題目的作品；Git 發布失敗會回復舊版本。 |
 | `/clear` | `topic` 單題時可留空 | 清除自己的指定題目作品；Git 發布失敗會回復舊版本。 |
 
@@ -31,7 +34,7 @@ Christmas 專用指令會集中在 `/christmas` 群組下：
 
 | 指令 | 參數 | 說明 |
 |---|---|---|
-| `/christmas blacklist` | `ids`（以空白分隔，可留空） | 設定黑名單；每次是完整覆蓋，不是追加。 |
+| `/christmas blacklist` | 舊指令，停用 | 相容入口，會提示改用頂層 `/blacklist` 操作。 |
 | `/christmas anonsay` | `content` | 匿名發言；作者只保存於私密資料。 |
 | `/christmas anonreply` | `message_id`、`content` | 匿名回覆指定訊息。 |
 | `/christmas giftshuffle` | 無 | 管理員依活動指定策略產生一次配對；已有結果時拒絕重抽。 |

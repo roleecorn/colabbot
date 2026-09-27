@@ -131,6 +131,72 @@ class ChristmasService:
             current[owner_id] = sorted(values)
             self.repository.save_auxiliary(event.public.event_key, "blacklist.json", current)
 
+    async def _participant_for_number(self, number: int):
+        if number < 1:
+            raise ChristmasServiceError("報名編號必須是正整數。")
+        event = await self._event()
+        participant = next(
+            (item for item in event.private.participants
+             if item.registration_number == number and not item.withdrawn),
+            None,
+        )
+        if participant is None:
+            raise ChristmasServiceError("找不到這個有效報名編號。")
+        return event, participant
+
+    async def _blacklist_owner(self, owner_id: str):
+        event = await self._event()
+        owner = next(
+            (item for item in event.private.participants
+             if item.discord_user_id == str(owner_id) and not item.withdrawn),
+            None,
+        )
+        if owner is None:
+            raise ChristmasServiceError("請先報名才能調整黑名單。")
+        return event, owner
+
+    async def blacklist_add(self, owner_id: str, number: int) -> None:
+        event, owner = await self._blacklist_owner(owner_id)
+        _, target = await self._participant_for_number(number)
+        if owner.discord_user_id == target.discord_user_id:
+            raise ChristmasServiceError("不能將自己加入黑名單。")
+        async with self._lock:
+            current = self.repository.load_auxiliary(event.public.event_key, "blacklist.json", {})
+            if not isinstance(current, dict):
+                raise ChristmasServiceError("黑名單資料異常，請通知管理員。")
+            values = {str(value) for value in current.get(owner.discord_user_id, [])}
+            if target.discord_user_id in values:
+                raise ChristmasServiceError("這位參加者已在你的黑名單中。")
+            values.add(target.discord_user_id)
+            current[owner.discord_user_id] = sorted(values)
+            self.repository.save_auxiliary(event.public.event_key, "blacklist.json", current)
+
+    async def blacklist_remove(self, owner_id: str, number: int) -> None:
+        event, owner = await self._blacklist_owner(owner_id)
+        _, target = await self._participant_for_number(number)
+        async with self._lock:
+            current = self.repository.load_auxiliary(event.public.event_key, "blacklist.json", {})
+            if not isinstance(current, dict):
+                raise ChristmasServiceError("黑名單資料異常，請通知管理員。")
+            values = {str(value) for value in current.get(owner.discord_user_id, [])}
+            if target.discord_user_id not in values:
+                raise ChristmasServiceError("這位參加者不在你的黑名單中。")
+            values.remove(target.discord_user_id)
+            current[owner.discord_user_id] = sorted(values)
+            self.repository.save_auxiliary(event.public.event_key, "blacklist.json", current)
+
+    async def blacklist_view(self, owner_id: str) -> list[dict[str, Any]]:
+        event, owner = await self._blacklist_owner(owner_id)
+        current = self.repository.load_auxiliary(event.public.event_key, "blacklist.json", {})
+        if not isinstance(current, dict):
+            raise ChristmasServiceError("黑名單資料異常，請通知管理員。")
+        ids = {str(value) for value in current.get(owner.discord_user_id, [])}
+        return [
+            {"registration_number": item.registration_number, "display_name": item.display_name}
+            for item in event.private.participants
+            if not item.withdrawn and item.discord_user_id in ids
+        ]
+
     async def _blocked_edges(self) -> set[tuple[str, str]]:
         event = await self._event()
         data = self.repository.load_auxiliary(event.public.event_key, "blacklist.json", {})

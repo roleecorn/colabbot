@@ -28,6 +28,10 @@ logger = logging.getLogger(__name__)
 
 
 class EventCog(Cog_extension):
+    blacklist_group = app_commands.Group(
+        name="blacklist",
+        description="管理 Christmas 活動黑名單（請在私訊使用）",
+    )
     christmas_group = app_commands.Group(
         name="christmas",
         description="Christmas 活動指令",
@@ -55,7 +59,7 @@ class EventCog(Cog_extension):
         return await interaction.response.send_message(content, ephemeral=ephemeral)
 
     async def _error(self, interaction: discord.Interaction, content: str):
-        await self._send(interaction, content, ephemeral=True)
+        await self._send(interaction, content, ephemeral=interaction.guild is not None)
 
     @staticmethod
     def _user_error(exc: Exception, fallback: str = "處理指令時發生錯誤，請稍後再試或通知管理員。") -> str:
@@ -499,16 +503,69 @@ class EventCog(Cog_extension):
     @christmas_group.command(name="blacklist", description="設定黑名單（完整覆蓋）")
     @app_commands.describe(ids="要封鎖的 Discord ID，以空白分隔；留空可清除")
     async def blacklist(self, interaction: discord.Interaction, ids: str = ""):
+        await self._error(
+            interaction,
+            "此舊指令已停用。請私訊機器人使用 `/blacklist add`、`/blacklist view` 或 `/blacklist remove`。",
+        )
+
+    async def _require_blacklist_dm(self, interaction: discord.Interaction) -> bool:
+        if interaction.guild is not None:
+            await self._error(interaction, "請私訊機器人使用 `/blacklist`。")
+            return False
+        return True
+
+    @blacklist_group.command(name="add", description="將報名編號加入你的黑名單")
+    @app_commands.describe(registration_number="要加入黑名單的報名編號")
+    async def blacklist_add(
+        self, interaction: discord.Interaction, registration_number: int
+    ):
+        if not await self._require_blacklist_dm(interaction):
+            return
         try:
-            await interaction.response.defer(ephemeral=True)
-            await self.christmas_service.set_blacklist(
-                str(interaction.user.id), [value for value in ids.split() if value]
+            await self.christmas_service.blacklist_add(
+                str(interaction.user.id), registration_number
             )
-            await self._send(interaction, "已設定黑名單。", ephemeral=True)
+            await self._send(interaction, f"已將編號 {registration_number} 加入黑名單。")
         except (ChristmasServiceError, OSError, ValueError) as exc:
             await self._error(interaction, self._user_error(exc))
         except Exception as exc:
-            await self._unexpected_error(interaction, "blacklist", exc)
+            await self._unexpected_error(interaction, "blacklist add", exc)
+
+    @blacklist_group.command(name="view", description="查看你的黑名單")
+    async def blacklist_view(self, interaction: discord.Interaction):
+        if not await self._require_blacklist_dm(interaction):
+            return
+        try:
+            entries = await self.christmas_service.blacklist_view(str(interaction.user.id))
+            if not entries:
+                content = "你的黑名單目前是空的。"
+            else:
+                content = "你的黑名單：\n" + "\n".join(
+                    f"[{entry['registration_number']}] {entry['display_name']}"
+                    for entry in entries
+                )
+            await self._send(interaction, content)
+        except (ChristmasServiceError, OSError, ValueError) as exc:
+            await self._error(interaction, self._user_error(exc))
+        except Exception as exc:
+            await self._unexpected_error(interaction, "blacklist view", exc)
+
+    @blacklist_group.command(name="remove", description="將報名編號從你的黑名單移除")
+    @app_commands.describe(registration_number="要移除的報名編號")
+    async def blacklist_remove(
+        self, interaction: discord.Interaction, registration_number: int
+    ):
+        if not await self._require_blacklist_dm(interaction):
+            return
+        try:
+            await self.christmas_service.blacklist_remove(
+                str(interaction.user.id), registration_number
+            )
+            await self._send(interaction, f"已將編號 {registration_number} 從黑名單移除。")
+        except (ChristmasServiceError, OSError, ValueError) as exc:
+            await self._error(interaction, self._user_error(exc))
+        except Exception as exc:
+            await self._unexpected_error(interaction, "blacklist remove", exc)
 
     @christmas_group.command(name="giftshuffle", description="依活動規則產生送禮配對")
     async def gift_shuffle(self, interaction: discord.Interaction):
