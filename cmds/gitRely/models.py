@@ -203,6 +203,9 @@ class EventPrivate:
     submission_starts_at: datetime
     submission_ends_at: datetime
     discussion_channel_id: str | None = None
+    blacklist_ends_at: datetime | None = None
+    max_blacklist_entries: int | None = None
+    max_blacklist_leaders: int | None = None
     participants: list[Participant] = field(default_factory=list)
     matching_policy: str | None = None
     schema_version: int = 1
@@ -212,6 +215,16 @@ class EventPrivate:
         _required_string({"value": self.registration_channel_id}, "value")
         if self.discussion_channel_id is not None:
             _required_string({"value": self.discussion_channel_id}, "value")
+        if self.blacklist_ends_at is not None and (
+            self.blacklist_ends_at.tzinfo is None or self.blacklist_ends_at.utcoffset() is None
+        ):
+            raise ValueError("blacklist_ends_at must include a timezone")
+        for name, value in (
+            ("max_blacklist_entries", self.max_blacklist_entries),
+            ("max_blacklist_leaders", self.max_blacklist_leaders),
+        ):
+            if value is not None and (not isinstance(value, int) or value < 0):
+                raise ValueError(f"{name} must be a non-negative integer")
         dates = [
             self.registration_starts_at,
             self.registration_ends_at,
@@ -257,6 +270,18 @@ class EventPrivate:
                 str(data["discussion_channel_id"])
                 if data.get("discussion_channel_id") is not None else None
             ),
+            blacklist_ends_at=(
+                _parse_datetime(data["blacklist_ends_at"], "blacklist_ends_at")
+                if data.get("blacklist_ends_at") else None
+            ),
+            max_blacklist_entries=(
+                int(data["max_blacklist_entries"])
+                if data.get("max_blacklist_entries") is not None else None
+            ),
+            max_blacklist_leaders=(
+                int(data["max_blacklist_leaders"])
+                if data.get("max_blacklist_leaders") is not None else None
+            ),
             registration_starts_at=_parse_datetime(
                 data.get("registration_starts_at"), "registration_starts_at"
             ),
@@ -293,6 +318,12 @@ class EventPrivate:
         }
         if self.discussion_channel_id:
             data["discussion_channel_id"] = self.discussion_channel_id
+        if self.blacklist_ends_at:
+            data["blacklist_ends_at"] = _datetime_json(self.blacklist_ends_at)
+        if self.max_blacklist_entries is not None:
+            data["max_blacklist_entries"] = self.max_blacklist_entries
+        if self.max_blacklist_leaders is not None:
+            data["max_blacklist_leaders"] = self.max_blacklist_leaders
         if self.matching_policy:
             data["matching_policy"] = self.matching_policy
         return data

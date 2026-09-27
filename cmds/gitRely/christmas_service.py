@@ -36,6 +36,28 @@ class ChristmasService:
             if not item.withdrawn
         }
 
+    def _ensure_blacklist_open(self, event) -> None:
+        private = event.private
+        if private.blacklist_ends_at is None or private.max_blacklist_entries is None:
+            raise ChristmasServiceError("管理員尚未設定本次活動的黑名單規則。")
+        now = self.events._now(event.public, self.events.clock)
+        if now > private.blacklist_ends_at:
+            raise ChristmasServiceError("黑名單設定時間已結束。")
+
+    def _read_blacklist(self, event) -> dict[str, list[str]]:
+        current = self.repository.load_auxiliary(event.public.event_key, "blacklist.json", {})
+        if not isinstance(current, dict):
+            raise ChristmasServiceError("黑名單資料異常，請通知管理員。")
+        if any(not isinstance(values, list) for values in current.values()):
+            raise ChristmasServiceError("黑名單資料異常，請通知管理員。")
+        return current
+
+    async def _blacklist_event(self):
+        event = await self.events.load_active()
+        if event.public.event_type not in {EventType.CHRISTMAS, EventType.GROUP}:
+            raise ChristmasServiceError("這個活動不支援黑名單功能。")
+        return event
+
     async def say(self, author_id: str, content: str, *, channel_id: str | None = None) -> dict[str, Any]:
         if not content.strip():
             raise ChristmasServiceError("匿名內容不可為空白。")
@@ -131,13 +153,13 @@ class ChristmasService:
             current[owner_id] = sorted(values)
             self.repository.save_auxiliary(event.public.event_key, "blacklist.json", current)
 
-    async def _participant_for_number(self, number: int):
+    async def _participant_for_number(self, number: int, *, active_only: bool = True):
         if number < 1:
             raise ChristmasServiceError("報名編號必須是正整數。")
-        event = await self._event()
+        event = await self._blacklist_event()
         participant = next(
             (item for item in event.private.participants
-             if item.registration_number == number and not item.withdrawn),
+             if item.registration_number == number and (not active_only or not item.withdrawn)),
             None,
         )
         if participant is None:
@@ -145,7 +167,7 @@ class ChristmasService:
         return event, participant
 
     async def _blacklist_owner(self, owner_id: str):
-        event = await self._event()
+        event = await self._blacklist_event()
         owner = next(
             (item for item in event.private.participants
              if item.discord_user_id == str(owner_id) and not item.withdrawn),
@@ -157,27 +179,45 @@ class ChristmasService:
 
     async def blacklist_add(self, owner_id: str, number: int) -> None:
         event, owner = await self._blacklist_owner(owner_id)
+        self._ensure_blacklist_open(event)
         _, target = await self._participant_for_number(number)
         if owner.discord_user_id == target.discord_user_id:
             raise ChristmasServiceError("不能將自己加入黑名單。")
         async with self._lock:
-            current = self.repository.load_auxiliary(event.public.event_key, "blacklist.json", {})
-            if not isinstance(current, dict):
-                raise ChristmasServiceError("黑名單資料異常，請通知管理員。")
+            current = self._read_blacklist(event)
             values = {str(value) for value in current.get(owner.discord_user_id, [])}
             if target.discord_user_id in values:
                 raise ChristmasServiceError("這位參加者已在你的黑名單中。")
+            if len(values) >= event.private.max_blacklist_entries:
+                raise ChristmasServiceError(
+                    f"黑名單已達上限（{event.private.max_blacklist_entries} 人）。"
+                )
+            if (
+                target.team_leader
+                and event.private.max_blacklist_leaders is not None
+            ):
+                leaders = {
+                    str(value) for value in values
+                    if any(
+                        item.discord_user_id == str(value) and item.team_leader
+                        and not item.withdrawn
+                        for item in event.private.participants
+                    )
+                }
+                if len(leaders) >= event.private.max_blacklist_leaders:
+                    raise ChristmasServiceError(
+                        f"黑名單中的組長已達上限（{event.private.max_blacklist_leaders} 人）。"
+                    )
             values.add(target.discord_user_id)
             current[owner.discord_user_id] = sorted(values)
             self.repository.save_auxiliary(event.public.event_key, "blacklist.json", current)
 
     async def blacklist_remove(self, owner_id: str, number: int) -> None:
         event, owner = await self._blacklist_owner(owner_id)
-        _, target = await self._participant_for_number(number)
+        self._ensure_blacklist_open(event)
+        _, target = await self._participant_for_number(number, active_only=False)
         async with self._lock:
-            current = self.repository.load_auxiliary(event.public.event_key, "blacklist.json", {})
-            if not isinstance(current, dict):
-                raise ChristmasServiceError("黑名單資料異常，請通知管理員。")
+            current = self._read_blacklist(event)
             values = {str(value) for value in current.get(owner.discord_user_id, [])}
             if target.discord_user_id not in values:
                 raise ChristmasServiceError("這位參加者不在你的黑名單中。")
@@ -187,14 +227,13 @@ class ChristmasService:
 
     async def blacklist_view(self, owner_id: str) -> list[dict[str, Any]]:
         event, owner = await self._blacklist_owner(owner_id)
-        current = self.repository.load_auxiliary(event.public.event_key, "blacklist.json", {})
-        if not isinstance(current, dict):
-            raise ChristmasServiceError("黑名單資料異常，請通知管理員。")
+        self._ensure_blacklist_open(event)
+        current = self._read_blacklist(event)
         ids = {str(value) for value in current.get(owner.discord_user_id, [])}
         return [
             {"registration_number": item.registration_number, "display_name": item.display_name}
             for item in event.private.participants
-            if not item.withdrawn and item.discord_user_id in ids
+            if item.discord_user_id in ids
         ]
 
     async def _blocked_edges(self) -> set[tuple[str, str]]:

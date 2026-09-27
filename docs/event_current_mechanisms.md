@@ -92,7 +92,7 @@ Discord 附件（檢查 100 MiB）
 
 | 項目 | 現行機制 | 尚不能當成已具備的行為 |
 |---|---|---|
-| 黑名單 | `/blacklist add/view/remove` 私訊操作，以固定報名編號解析 active participant；舊 `/christmas blacklist` 只提示新介面 | 限額、組長限額、獨立期限、管理員批次修正 |
+| 黑名單 | `/blacklist add/view/remove` 私訊操作，以固定報名編號解析參加者；管理員 `/setblacklistsettings` 設定截止、每人上限及可選組長上限 | 管理員批次修正 |
 | 匿名發言 | 已報名者在報名頻道使用；Bot 將內容送入頻道，後台保存作者及 Discord 訊息對照 | 配對雙方的私人轉送對話 |
 | 匿名回覆 | 找內部 ID 或 Discord 訊息 ID，检查對方黑名單後以 Bot 回覆 | 完整 DM 工作流程、所有訊息鏈行為已驗證 |
 | 黑名單方向 | owner 封鎖 blocked，產生 blocked → owner 的禁止邊 | 聖誕配對要求的雙向禁止尚未完整實作 |

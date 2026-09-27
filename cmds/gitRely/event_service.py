@@ -247,6 +247,31 @@ class EventService:
             private.discussion_channel_id = str(channel_id)
             await asyncio.to_thread(self.repository.save_private, private, public)
 
+    async def set_blacklist_settings(
+        self,
+        *,
+        ends_at: datetime,
+        max_entries: int,
+        max_leaders: int | None = None,
+    ) -> None:
+        event = await self.load_active()
+        if event.public.event_type not in {EventType.CHRISTMAS, EventType.GROUP}:
+            raise EventServiceError("目前活動類型不支援黑名單。")
+        if ends_at.tzinfo is None or ends_at.utcoffset() is None:
+            raise EventServiceError("黑名單截止時間必須包含時區。")
+        if max_entries < 0 or (max_leaders is not None and max_leaders < 0):
+            raise EventServiceError("黑名單上限不可為負數。")
+        if max_leaders is not None and event.public.event_type is not EventType.GROUP:
+            raise EventServiceError("組長黑名單上限只能用於組活。")
+        async with self._lock_for(event.public.event_key):
+            public, private = await asyncio.to_thread(
+                self.repository.load_event, event.public.event_key
+            )
+            private.blacklist_ends_at = ends_at
+            private.max_blacklist_entries = max_entries
+            private.max_blacklist_leaders = max_leaders
+            await asyncio.to_thread(self.repository.save_private, private, public)
+
     async def leave(self, user_id: str) -> Participant:
         user_id = str(user_id)
         event = await self.load_active()

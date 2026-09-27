@@ -72,6 +72,7 @@ py .\bot2.py --token <TOKEN> --noBase --ext gitRely
 - [ ] Discord slash command 同步完成。
 - [ ] `/seteventname`、`/signup`、`/event`、`/upload`、`/clear` 出現在指令清單。
 - [ ] 確認管理員可用 `/seteventchannels` 設定活動雜談區。
+- [ ] 確認管理員可用 `/setblacklistsettings` 設定黑名單額度與截止時間。
 - [ ] 沒有同時載入 `gitRely.event`、`gitRely.event_multi` 或其他會註冊同名指令的 extension。
 
 若只要直接載入 Cog，也可以使用 `--ext gitRely.event_cog`；兩者擇一即可。
@@ -104,6 +105,7 @@ py .\bot2.py --token <TOKEN> --noBase --ext gitRely
 5. 將執行指令的頻道記為 `registration_channel_id`。
 
 之後執行 `/seteventchannels`，選擇活動雜談區，以接收報名修改／退出／恢復通知。
+另執行 `/setblacklistsettings`，設定黑名單截止時間、每人名額，以及組活適用的組長名額。
 
 啟用後在本機驗證：
 
@@ -272,7 +274,7 @@ https://aafanclubdc.github.io/<event_key>/pieces/<participant_key>/<topic_key>/
 
 操作規則：
 
-- 黑名單 add/view/remove 需私訊機器人，並以報名編號操作；每場活動額度與獨立截止時間設定仍待完成。
+- 黑名單 add/view/remove 需私訊機器人，並以報名編號操作；管理員用 `/setblacklistsettings` 設定截止及名額。截止後所有三個操作都會被拒絕。
 - 匿名作者、匿名訊息、黑名單與配對結果只寫入 private data。
 - `/giftshuffle` 有既有結果時會拒絕重抽，避免覆蓋已通知的配對。
 - 目前尚未註冊 `rules_2026` 配對策略，因此在配對策略完成前，`/giftshuffle` 預期會失敗；

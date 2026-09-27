@@ -201,6 +201,42 @@ class EventCog(Cog_extension):
         except Exception as exc:
             await self._unexpected_error(interaction, "seteventchannels", exc)
 
+    @app_commands.command(name="setblacklistsettings", description="設定目前活動的黑名單截止時間與人數上限")
+    @app_commands.describe(
+        ends_at="黑名單截止時間（ISO datetime 或 yyyymmdd-HHMM）",
+        max_entries="每人可封鎖的參加者數量上限",
+        max_leaders="組活中可封鎖的組長數量上限（選填）",
+    )
+    async def set_blacklist_settings(
+        self,
+        interaction: discord.Interaction,
+        ends_at: str,
+        max_entries: int,
+        max_leaders: Optional[int] = None,
+    ):
+        if not self._is_admin(interaction):
+            await self._error(interaction, "只有管理員可以設定黑名單規則。")
+            return
+        try:
+            event = await self.event_service.load_active()
+            deadline = self._parse_datetime(ends_at, event.public.timezone)
+            await self.event_service.set_blacklist_settings(
+                ends_at=deadline,
+                max_entries=max_entries,
+                max_leaders=max_leaders,
+            )
+            leader_note = (
+                f"組長上限 {max_leaders} 人；" if max_leaders is not None else ""
+            )
+            await self._send(
+                interaction,
+                f"已設定黑名單截止時間 {deadline.isoformat()}、每人上限 {max_entries} 人，{leader_note}可開始使用。",
+            )
+        except (EventServiceError, OSError, ValueError) as exc:
+            await self._error(interaction, self._user_error(exc))
+        except Exception as exc:
+            await self._unexpected_error(interaction, "setblacklistsettings", exc)
+
     @app_commands.command(name="event", description="報名、修改、退出或恢復活動報名")
     @app_commands.choices(
         action=[
