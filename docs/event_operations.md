@@ -275,6 +275,8 @@ https://aafanclubdc.github.io/<event_key>/pieces/<participant_key>/<topic_key>/
   /blacklist remove registration_number:<報名編號>
   /christmas giftshuffle
   /christmas giftme
+  /group view
+  /group viewall
   /christmas publishworks channel:<作品連結頻道>
 ```
 

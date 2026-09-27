@@ -388,6 +388,36 @@ class ChristmasService:
         user_id = str(user_id)
         return [item for item in assignments if item.get("giver_id") == user_id or item.get("receiver_id") == user_id]
 
+    async def gift_recipient_for(self, user_id: str):
+        event = await self._event()
+        data = self.repository.load_auxiliary(event.public.event_key, "gift-assignments.json", None)
+        if not isinstance(data, dict) or not isinstance(data.get("assignments"), list):
+            raise ChristmasServiceError("目前還沒有可查看的送禮配對結果。")
+        assignment = next(
+            (item for item in data["assignments"]
+             if isinstance(item, dict) and item.get("giver_id") == str(user_id)),
+            None,
+        )
+        if assignment is None:
+            raise ChristmasServiceError("找不到你的送禮配對資料。")
+        recipient = next(
+            (item for item in event.private.participants
+             if item.discord_user_id == str(assignment.get("receiver_id")) and not item.withdrawn),
+            None,
+        )
+        if recipient is None:
+            raise ChristmasServiceError("找不到收禮者資料。")
+        return recipient
+
+    async def matching_locked(self) -> bool:
+        event = await self._event()
+        now = self.events._now(event.public, self.events.clock)
+        return (
+            now >= event.private.registration_ends_at
+            and event.private.blacklist_ends_at is not None
+            and now >= event.private.blacklist_ends_at
+        )
+
     async def all_gift_assignments(self) -> list[dict[str, Any]]:
         event = await self._event()
         data = self.repository.load_auxiliary(event.public.event_key, "gift-assignments.json", None)

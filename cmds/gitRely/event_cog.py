@@ -28,6 +28,10 @@ logger = logging.getLogger(__name__)
 
 
 class EventCog(Cog_extension):
+    group_group = app_commands.Group(
+        name="group",
+        description="私訊查看活動配對或分組結果",
+    )
     sudo_group = app_commands.Group(
         name="sudo",
         description="目前活動主辦者工具",
@@ -862,20 +866,92 @@ class EventCog(Cog_extension):
     async def gift_me(self, interaction: discord.Interaction):
         try:
             await interaction.response.defer(ephemeral=True)
-            assignments = await self.christmas_service.gift_for(str(interaction.user.id))
-            if not assignments:
-                raise ChristmasServiceError("找不到你的配對資料。")
-            lines = []
-            for item in assignments:
-                if item.get("giver_id") == str(interaction.user.id):
-                    lines.append(f"你要送給：<@{item.get('receiver_id')}>")
-                if item.get("receiver_id") == str(interaction.user.id):
-                    lines.append(f"送給你的人：<@{item.get('giver_id')}>")
-            await self._send(interaction, "\n".join(lines), ephemeral=True)
+            recipient = await self.christmas_service.gift_recipient_for(
+                str(interaction.user.id)
+            )
+            await self._send(
+                interaction,
+                f"你的收禮者是 [{recipient.registration_number}]{recipient.display_name}。",
+                ephemeral=True,
+            )
         except (ChristmasServiceError, OSError, ValueError) as exc:
             await self._error(interaction, self._user_error(exc))
         except Exception as exc:
             await self._unexpected_error(interaction, "giftme", exc)
+
+    async def _require_group_dm(self, interaction: discord.Interaction) -> bool:
+        if interaction.guild is not None:
+            await self._error(interaction, "請私訊機器人使用 `/group` 查看配對結果。")
+            return False
+        return True
+
+    @group_group.command(name="view", description="查看自己的 Christmas 收禮者報名資料")
+    async def group_view(self, interaction: discord.Interaction):
+        if not await self._require_group_dm(interaction):
+            return
+        await interaction.response.defer(thinking=True)
+        try:
+            recipient = await self.christmas_service.gift_recipient_for(
+                str(interaction.user.id)
+            )
+            content = "\n".join(
+                [
+                    f"[{recipient.registration_number}]",
+                    f"暱稱：{recipient.display_name}",
+                    *([f"AA形象：{recipient.aa_image}"] if recipient.aa_image else []),
+                    *([f"是否報名組長：{'是' if recipient.team_leader else '否'}"]
+                      if recipient.team_leader is not None else []),
+                    *([f"備註：{recipient.notes}"] if recipient.notes else []),
+                ]
+            )
+            if recipient.signup_channel_id and recipient.signup_message_id:
+                channel = (
+                    self.bot.get_channel(int(recipient.signup_channel_id))
+                    or await self.bot.fetch_channel(int(recipient.signup_channel_id))
+                )
+                message = await channel.fetch_message(int(recipient.signup_message_id))
+                content = message.content
+            await self._send(
+                interaction,
+                f"你的收禮者報名表：\n{content}",
+            )
+        except (ChristmasServiceError, EventServiceError, OSError, ValueError) as exc:
+            await self._error(interaction, self._user_error(exc))
+        except Exception as exc:
+            await self._unexpected_error(interaction, "group view", exc)
+
+    @group_group.command(name="viewall", description="查看所有 Christmas 配對（截止鎖定前）")
+    async def group_viewall(self, interaction: discord.Interaction):
+        if not await self._require_group_dm(interaction):
+            return
+        await interaction.response.defer(thinking=True)
+        try:
+            if await self.christmas_service.matching_locked():
+                raise ChristmasServiceError("報名表已鎖定，不能查看完整配對名單。")
+            event = await self.event_service.load_active()
+            participants = {item.discord_user_id: item for item in event.private.participants}
+            assignments = await self.christmas_service.all_gift_assignments()
+            lines = ["完整配對名單："]
+            for item in assignments:
+                giver = participants.get(str(item.get("giver_id")))
+                receiver = participants.get(str(item.get("receiver_id")))
+                if giver and receiver:
+                    lines.append(
+                        f"[{giver.registration_number}]{giver.display_name} → "
+                        f"[{receiver.registration_number}]{receiver.display_name}"
+                    )
+            page = ""
+            for line in lines:
+                if len(page) + len(line) + 1 > 1800:
+                    await self._send(interaction, page)
+                    page = ""
+                page += line + "\n"
+            if page:
+                await self._send(interaction, page)
+        except (ChristmasServiceError, EventServiceError, OSError, ValueError) as exc:
+            await self._error(interaction, self._user_error(exc))
+        except Exception as exc:
+            await self._unexpected_error(interaction, "group viewall", exc)
 
     @christmas_group.command(name="publishworks", description="依收禮者編號公開 Christmas 投稿作品")
     @app_commands.describe(channel="作品連結公開頻道")
