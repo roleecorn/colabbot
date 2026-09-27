@@ -18,7 +18,6 @@ class Cog_extension(commands.Cog):
             return False
         return author.guild_permissions.administrator
     @staticmethod
-    def bIsAAFanclub(ctx: Context):
-        if ctx.guild.id == GUILD_ID:
-            return True
-        return False
+    def bIsAAFanclub(ctx: Context | discord.Interaction) -> bool:
+        guild = getattr(ctx, "guild", None)
+        return guild is not None and guild.id == GUILD_ID

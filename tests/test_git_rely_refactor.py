@@ -5,6 +5,7 @@ import unittest
 import zipfile
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
@@ -19,6 +20,7 @@ from cmds.gitRely.storage import SubmissionStorage
 from cmds.gitRely.submission_service import SubmissionService, SubmissionServiceError
 from cmds.gitRely.event_cog import EventCog
 from cmds.gitRely.publisher import GitPublishError, GitPublisher
+from core.classes import Cog_extension, GUILD_ID
 
 
 TZ = ZoneInfo("Asia/Taipei")
@@ -87,6 +89,16 @@ class EventRefactorTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_aa_fanclub_check_handles_interactions_without_a_guild(self):
+        self.assertFalse(Cog_extension.bIsAAFanclub(SimpleNamespace()))
+        self.assertFalse(Cog_extension.bIsAAFanclub(SimpleNamespace(guild=None)))
+        self.assertTrue(
+            Cog_extension.bIsAAFanclub(SimpleNamespace(guild=SimpleNamespace(id=GUILD_ID)))
+        )
+        self.assertFalse(
+            Cog_extension.bIsAAFanclub(SimpleNamespace(guild=SimpleNamespace(id=123)))
+        )
+
     def test_christmas_commands_are_registered_under_one_group(self):
         self.assertEqual(EventCog.christmas_group.name, "christmas")
         self.assertEqual(
@@ -101,6 +113,21 @@ class EventRefactorTests(unittest.TestCase):
                 "publishworks",
             },
         )
+
+    def test_unexpected_errors_get_actionable_messages_by_failure_type(self):
+        cases = (
+            (ConnectionError("secret endpoint"), "無法連線至必要服務"),
+            (TimeoutError("secret endpoint"), "連線等待逾時"),
+            (PermissionError("private path"), "無法存取所需的活動檔案或目錄"),
+            (FileNotFoundError("private path"), "找不到必要的活動資料或檔案"),
+            (RuntimeError("private details"), "系統內部處理失敗"),
+        )
+        for error, expected in cases:
+            with self.subTest(error=type(error).__name__):
+                message = EventCog._unexpected_error_message(error, "AB12CD34")
+                self.assertIn(expected, message)
+                self.assertIn("AB12CD34", message)
+                self.assertNotIn(str(error), message)
 
     def test_status_boundaries_are_derived(self):
         event = make_event(self.service)

@@ -8,6 +8,7 @@ import logging
 import os
 import re
 import tempfile
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -75,17 +76,46 @@ class EventCog(Cog_extension):
         await self._send(interaction, content, ephemeral=interaction.guild is not None)
 
     @staticmethod
-    def _user_error(exc: Exception, fallback: str = "處理指令時發生錯誤，請稍後再試或通知管理員。") -> str:
+    def _user_error(exc: Exception, fallback: str = "活動資料處理失敗，請確認資料完整後重試；若仍發生，請通知主辦者。") -> str:
         if isinstance(exc, (EventServiceError, SubmissionServiceError, ChristmasServiceError)):
             return str(exc)
         if isinstance(exc, ValueError) and any("\u4e00" <= char <= "\u9fff" for char in str(exc)):
             return str(exc)
         return fallback
 
+    @staticmethod
+    def _unexpected_error_message(exc: Exception, error_id: str) -> str:
+        suffix = f"（錯誤編號：{error_id}）"
+        if isinstance(exc, discord.Forbidden):
+            return "機器人缺少執行此操作所需的 Discord 權限；請管理員檢查頻道與機器人權限。" + suffix
+        if isinstance(exc, discord.NotFound):
+            return "指定的 Discord 頻道或訊息已不存在，請重新選擇有效的目標。" + suffix
+        if isinstance(exc, discord.HTTPException):
+            if exc.status == 429:
+                return "Discord 目前限制了請求頻率，請稍等片刻再試。" + suffix
+            if exc.status >= 500:
+                return "Discord 服務暫時無法完成操作，請稍後再試。" + suffix
+            return "Discord 拒絕了這項操作；請確認設定或目標有效，若問題持續請通知管理員。" + suffix
+        if isinstance(exc, (asyncio.TimeoutError, TimeoutError)):
+            return "連線等待逾時，請稍後重試；若持續發生，請通知管理員檢查服務連線。" + suffix
+        if isinstance(exc, ConnectionError):
+            return "目前無法連線至必要服務，請稍後重試；若持續發生，請通知管理員。" + suffix
+        if isinstance(exc, PermissionError):
+            return "機器人目前無法存取所需的活動檔案或目錄，請通知管理員檢查服務權限。" + suffix
+        if isinstance(exc, FileNotFoundError):
+            return "找不到必要的活動資料或檔案，請通知管理員檢查活動設定。" + suffix
+        if isinstance(exc, OSError):
+            return "活動檔案讀寫失敗，請稍後重試；若持續發生，請通知管理員檢查儲存空間與權限。" + suffix
+        return "系統內部處理失敗，請稍後重試；若持續發生，請把錯誤編號提供給管理員。" + suffix
+
     async def _unexpected_error(self, interaction: discord.Interaction, command: str, exc: Exception):
-        logger.error("Unhandled error in /%s", command, exc_info=(type(exc), exc, exc.__traceback__))
+        error_id = uuid.uuid4().hex[:8].upper()
+        logger.error(
+            "Unhandled error %s in /%s", error_id, command,
+            exc_info=(type(exc), exc, exc.__traceback__),
+        )
         try:
-            await self._error(interaction, "處理指令時發生未預期錯誤，請稍後再試或通知管理員。")
+            await self._error(interaction, self._unexpected_error_message(exc, error_id))
         except (discord.HTTPException, discord.InteractionResponded) as response_error:
             logger.error("Could not send /%s error response", command, exc_info=response_error)
 
@@ -300,7 +330,7 @@ class EventCog(Cog_extension):
         await self._signup_action(interaction, action)
 
     async def _signup_action(self, interaction: discord.Interaction, action: str):
-        if not interaction.guild or not self.bIsAAFanclub(interaction):
+        if not self.bIsAAFanclub(interaction):
             await self._error(interaction, "此指令只能在指定伺服器使用。")
             return
         try:
@@ -1287,7 +1317,7 @@ class SignupModal(discord.ui.Modal):
         self.add_item(self.notes)
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
-        if not interaction.guild or not self.cog.bIsAAFanclub(interaction):
+        if not self.cog.bIsAAFanclub(interaction):
             await self.cog._error(interaction, "此表單只能在指定伺服器提交。")
             return
         nickname = self.nickname.value.strip()
