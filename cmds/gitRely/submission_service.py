@@ -63,7 +63,10 @@ class SubmissionService:
         if current_status is not EventStatus.SUBMISSION_OPEN:
             raise SubmissionServiceError("目前不是投稿期間，無法上傳作品。")
         participant = next(
-            (item for item in event.private.participants if item.discord_user_id == str(user_id)),
+            (
+                item for item in event.private.participants
+                if item.discord_user_id == str(user_id) and not item.withdrawn
+            ),
             None,
         )
         if participant is None:
@@ -150,7 +153,10 @@ class SubmissionService:
             raise SubmissionServiceError("目前不是投稿期間，無法清除作品。")
         selected_topic = await self.events.resolve_topic(topic)
         participant = next(
-            (item for item in event.private.participants if item.discord_user_id == str(user_id)),
+            (
+                item for item in event.private.participants
+                if item.discord_user_id == str(user_id) and not item.withdrawn
+            ),
             None,
         )
         if participant is None:

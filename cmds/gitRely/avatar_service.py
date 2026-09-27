@@ -42,7 +42,9 @@ class AvatarService:
         )
         if participant is None:
             raise EventServiceError("找不到這位活動參賽者。")
-        uid = event.private.participants.index(participant) + 1
+        if participant.withdrawn:
+            raise EventServiceError("取消報名者無法同步公開頭像。")
+        uid = participant.registration_number
         try:
             avatar = asset.with_format("png").with_size(self.size)
             content = await avatar.read()

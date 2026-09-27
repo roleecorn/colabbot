@@ -180,11 +180,12 @@ class EventCog(Cog_extension):
             return
         await self._send(interaction, f"已啟用活動 `{event.public.event_key}`。")
 
-    @app_commands.command(name="event", description="報名或退出活動")
+    @app_commands.command(name="event", description="報名、退出或恢復活動報名")
     @app_commands.choices(
         action=[
             app_commands.Choice(name="join", value="join"),
             app_commands.Choice(name="leave", value="leave"),
+            app_commands.Choice(name="restore", value="restore"),
         ]
     )
     async def event(self, interaction: discord.Interaction, action: str):
@@ -192,26 +193,37 @@ class EventCog(Cog_extension):
             await self._error(interaction, "此指令只能在指定伺服器使用。")
             return
         try:
-            active = await self.event_service.load_active()
-            if str(interaction.channel_id) != active.private.registration_channel_id:
-                raise EventServiceError(f"請在 <#{active.private.registration_channel_id}> 使用。")
             await interaction.response.defer(thinking=True)
             if action == "join":
                 participant = await self.event_service.join(str(interaction.user.id), interaction.user.name)
                 try:
                     await self._publish_participant_avatar(participant, interaction.user)
-                    message = "報名成功，頭像已同步。"
+                    message = f"報名成功，編號為 {participant.registration_number}。"
                 except (AvatarServiceError, EventServiceError, OSError, ValueError):
                     logger.warning("Could not sync avatar for participant %s", participant.discord_user_id, exc_info=True)
-                    message = "報名成功，但頭像同步失敗，管理員可稍後重新同步。"
+                    message = (
+                        f"報名成功，編號為 {participant.registration_number}，"
+                        "但頭像同步失敗，管理員可稍後重新同步。"
+                    )
                 # The participant key is private mapping data and must never
                 # be exposed in a public channel.
                 await self._send(interaction, message, ephemeral=True)
             elif action == "leave":
-                await self.event_service.leave(str(interaction.user.id))
-                await self._send(interaction, "已退出活動。")
+                participant = await self.event_service.leave(str(interaction.user.id))
+                synced = await self._sync_participant_index(participant)
+                message = f"編號 {participant.registration_number} 已取消報名；恢復時會保留原編號。"
+                if not synced:
+                    message += "公開名單同步失敗，請通知管理員。"
+                await self._send(interaction, message, ephemeral=True)
+            elif action == "restore":
+                participant = await self.event_service.restore(str(interaction.user.id))
+                synced = await self._sync_participant_index(participant)
+                message = f"已恢復報名，沿用編號 {participant.registration_number}。"
+                if not synced:
+                    message += "公開名單同步失敗，請通知管理員。"
+                await self._send(interaction, message, ephemeral=True)
             else:
-                raise EventServiceError("請選擇 join 或 leave。")
+                raise EventServiceError("請選擇 join、leave 或 restore。")
         except (EventServiceError, OSError, ValueError) as exc:
             await self._error(interaction, self._user_error(exc))
         except Exception as exc:
@@ -231,6 +243,25 @@ class EventCog(Cog_extension):
             await asyncio.to_thread(index.restore, snapshot)
             raise
 
+    async def _sync_participant_index(self, participant) -> bool:
+        event = await self.event_service.load_active()
+        index = self.submission_service.public_index
+        snapshot = await asyncio.to_thread(index.sync_participants, event)
+        try:
+            await self.submission_service.publisher.publish(
+                self.repository.public_dir(event.public.event_key),
+                f"Update participant status ({participant.registration_number})",
+            )
+        except Exception:
+            await asyncio.to_thread(index.restore, snapshot)
+            logger.warning(
+                "Could not publish participant status for registration %s",
+                participant.registration_number,
+                exc_info=True,
+            )
+            return False
+        return True
+
     @app_commands.command(name="eventsyncicons", description="同步目前活動所有參賽者的 Discord 頭像")
     async def sync_event_icons(self, interaction: discord.Interaction):
         if not self._is_admin(interaction):
@@ -242,6 +273,8 @@ class EventCog(Cog_extension):
             synced = 0
             failed = []
             for participant in event.private.participants:
+                if participant.withdrawn:
+                    continue
                 try:
                     user = await self.bot.fetch_user(int(participant.discord_user_id))
                     await self.avatar_service.sync_participant(

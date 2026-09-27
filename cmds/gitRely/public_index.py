@@ -58,11 +58,12 @@ class PublicEventIndex:
     def _participant_rows(participants: list[Participant]) -> list[dict[str, Any]]:
         return [
             {
-                "uid": uid,
+                "uid": participant.registration_number,
                 "hashId": participant.participant_key,
-                "name": participant.display_name or f"參加者 {uid}",
+                "name": participant.display_name or f"參加者 {participant.registration_number}",
             }
-            for uid, participant in enumerate(participants, start=1)
+            for participant in participants
+            if not participant.withdrawn
         ]
 
     @classmethod
@@ -70,7 +71,13 @@ class PublicEventIndex:
         cls, participants: list[Participant]
     ) -> list[dict[str, Any]]:
         rows = cls._participant_rows(participants)
-        for row, participant in zip(rows, participants):
+        active_by_number = {
+            participant.registration_number: participant
+            for participant in participants
+            if not participant.withdrawn
+        }
+        for row in rows:
+            participant = active_by_number[row["uid"]]
             if participant.avatar_path:
                 row["image"] = participant.avatar_path
         return rows
@@ -103,8 +110,9 @@ class PublicEventIndex:
         topics: list[Topic],
     ) -> list[dict[str, Any]]:
         rows_by_key = {
-            participant.participant_key: (uid, participant)
-            for uid, participant in enumerate(participants, start=1)
+            participant.participant_key: (participant.registration_number, participant)
+            for participant in participants
+            if not participant.withdrawn
         }
         result: list[dict[str, Any]] = []
         for work in works:
@@ -180,7 +188,7 @@ class PublicEventIndex:
         snapshot = self.snapshot(event.public.event_key)
         participant_rows = self._participant_rows_with_avatars(event.private.participants)
         participant_keys = {row["hashId"] for row in participant_rows}
-        if participant.participant_key not in participant_keys:
+        if participant.withdrawn or participant.participant_key not in participant_keys:
             raise ValueError("participant is not in the event participant list")
         _, work_path = self._paths(event.public.event_key)
         works = self._normalise_works(
@@ -194,10 +202,7 @@ class PublicEventIndex:
                 and work["topicKey"] == topic.key
             )
         ]
-        uid = next(
-            uid for uid, item in enumerate(event.private.participants, start=1)
-            if item.participant_key == participant.participant_key
-        )
+        uid = participant.registration_number
         works.append(
             {
                 "hashId": participant.participant_key,

@@ -31,7 +31,10 @@ class ChristmasService:
 
     async def _participant_ids(self) -> set[str]:
         event = await self._event()
-        return {item.discord_user_id for item in event.private.participants}
+        return {
+            item.discord_user_id for item in event.private.participants
+            if not item.withdrawn
+        }
 
     async def say(self, author_id: str, content: str, *, channel_id: str | None = None) -> dict[str, Any]:
         if not content.strip():
@@ -147,13 +150,16 @@ class ChristmasService:
             existing = self.repository.load_auxiliary(event.public.event_key, "gift-assignments.json", None)
             if existing is not None:
                 raise ChristmasServiceError("送禮配對已存在，為避免覆蓋既有結果，拒絕重新抽籤。")
+            active_participants = [
+                item for item in event.private.participants if not item.withdrawn
+            ]
             policy = self.policy_resolver(event.private.matching_policy)
             assignments = policy.generate(
-                event.private.participants,
+                active_participants,
                 await self._blocked_edges(),
                 config or {},
             )
-            self._validate_assignments(event.private.participants, assignments, await self._blocked_edges())
+            self._validate_assignments(active_participants, assignments, await self._blocked_edges())
             result = {
                 "schema_version": 1,
                 "matching_policy": event.private.matching_policy,

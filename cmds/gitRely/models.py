@@ -81,6 +81,8 @@ class Participant:
     joined_at: datetime
     display_name: str = ""
     avatar_path: str = ""
+    registration_number: int = 0
+    withdrawn: bool = False
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "Participant":
@@ -90,13 +92,17 @@ class Participant:
             joined_at=_parse_datetime(data.get("joined_at"), "joined_at"),
             display_name=str(data.get("display_name", "")),
             avatar_path=str(data.get("avatar_path", "")),
+            registration_number=int(data.get("registration_number", 0)),
+            withdrawn=bool(data.get("withdrawn", False)),
         )
 
-    def to_dict(self) -> dict[str, str]:
+    def to_dict(self) -> dict[str, Any]:
         data = {
             "discord_user_id": self.discord_user_id,
             "participant_key": self.participant_key,
             "joined_at": _datetime_json(self.joined_at),
+            "registration_number": self.registration_number,
+            "withdrawn": self.withdrawn,
         }
         if self.display_name:
             data["display_name"] = self.display_name
@@ -199,10 +205,15 @@ class EventPrivate:
             raise ValueError("event times must be in chronological order")
         user_ids = [participant.discord_user_id for participant in self.participants]
         keys = [participant.participant_key for participant in self.participants]
+        numbers = [participant.registration_number for participant in self.participants]
         if len(user_ids) != len(set(user_ids)):
             raise ValueError("participant Discord IDs must be unique")
         if len(keys) != len(set(keys)):
             raise ValueError("participant keys must be unique")
+        if any(not isinstance(number, int) or number < 1 for number in numbers):
+            raise ValueError("participant registration numbers must be positive integers")
+        if len(numbers) != len(set(numbers)):
+            raise ValueError("participant registration numbers must be unique")
         for key in keys:
             _safe_key(key, "participant key")
         if public and public.event_key != self.event_key:
@@ -228,7 +239,12 @@ class EventPrivate:
                 data.get("submission_starts_at"), "submission_starts_at"
             ),
             submission_ends_at=_parse_datetime(data.get("submission_ends_at"), "submission_ends_at"),
-            participants=[Participant.from_dict(item) for item in raw_participants],
+            participants=[
+                Participant.from_dict(
+                    {**item, "registration_number": item.get("registration_number", index)}
+                )
+                for index, item in enumerate(raw_participants, start=1)
+            ],
             matching_policy=data.get("matching_policy"),
             schema_version=int(data.get("schema_version", 1)),
         )

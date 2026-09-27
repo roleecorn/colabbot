@@ -120,7 +120,10 @@ class EventService:
     async def participant(self, user_id: str) -> Participant | None:
         event = await self.load_active()
         return next(
-            (item for item in event.private.participants if item.discord_user_id == str(user_id)),
+            (
+                item for item in event.private.participants
+                if item.discord_user_id == str(user_id) and not item.withdrawn
+            ),
             None,
         )
 
@@ -136,7 +139,13 @@ class EventService:
             now = self._now(public, self.clock)
             if event_status(private, now) is not EventStatus.REGISTRATION_OPEN:
                 raise EventServiceError("目前不是報名期間。")
-            if any(item.discord_user_id == user_id for item in private.participants):
+            existing = next(
+                (item for item in private.participants if item.discord_user_id == user_id),
+                None,
+            )
+            if existing:
+                if existing.withdrawn:
+                    raise EventServiceError("你已取消報名，請使用恢復報名功能。")
                 raise EventServiceError("你已經報名了。")
             participant = Participant(
                 discord_user_id=user_id,
@@ -145,12 +154,15 @@ class EventService:
                 ),
                 joined_at=now,
                 display_name=display_name,
+                registration_number=max(
+                    (item.registration_number for item in private.participants), default=0
+                ) + 1,
             )
             private.participants.append(participant)
             await asyncio.to_thread(self.repository.save_private, private, public)
             return participant
 
-    async def leave(self, user_id: str) -> None:
+    async def leave(self, user_id: str) -> Participant:
         user_id = str(user_id)
         event = await self.load_active()
         async with self._lock_for(event.public.event_key):
@@ -159,13 +171,37 @@ class EventService:
             )
             if event_status(private, self._now(public, self.clock)) is not EventStatus.REGISTRATION_OPEN:
                 raise EventServiceError("目前不是報名期間。")
-            before = len(private.participants)
-            private.participants[:] = [
-                item for item in private.participants if item.discord_user_id != user_id
-            ]
-            if len(private.participants) == before:
+            participant = next(
+                (item for item in private.participants if item.discord_user_id == user_id),
+                None,
+            )
+            if participant is None or participant.withdrawn:
                 raise EventServiceError("你尚未報名。")
+            participant.withdrawn = True
             await asyncio.to_thread(self.repository.save_private, private, public)
+            return participant
+
+    async def restore(self, user_id: str) -> Participant:
+        """Restore a withdrawn participant without changing their event number."""
+        user_id = str(user_id)
+        event = await self.load_active()
+        async with self._lock_for(event.public.event_key):
+            public, private = await asyncio.to_thread(
+                self.repository.load_event, event.public.event_key
+            )
+            if event_status(private, self._now(public, self.clock)) is not EventStatus.REGISTRATION_OPEN:
+                raise EventServiceError("目前不是報名期間。")
+            participant = next(
+                (item for item in private.participants if item.discord_user_id == user_id),
+                None,
+            )
+            if participant is None:
+                raise EventServiceError("找不到已取消的報名資料。")
+            if not participant.withdrawn:
+                raise EventServiceError("你的報名目前有效，不需要恢復。")
+            participant.withdrawn = False
+            await asyncio.to_thread(self.repository.save_private, private, public)
+            return participant
 
     async def set_participant_avatar(self, user_id: str, avatar_path: str) -> Participant:
         """Store the public event-relative path for a participant's avatar."""
