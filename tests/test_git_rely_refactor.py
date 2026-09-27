@@ -43,6 +43,7 @@ class FakeInteractionResponse:
 class FakeInteraction:
     def __init__(self, user_id, channel_id=42):
         self.user = type("User", (), {"id": user_id, "name": "tester"})()
+        self.guild = type("Guild", (), {"id": 1})()
         self.channel_id = channel_id
         self.response = FakeInteractionResponse()
         self.followups = []
@@ -90,7 +91,15 @@ class EventRefactorTests(unittest.TestCase):
         self.assertEqual(EventCog.christmas_group.name, "christmas")
         self.assertEqual(
             {command.name for command in EventCog.christmas_group.commands},
-            {"anonsay", "anonreply", "blacklist", "giftshuffle", "giftme"},
+            {
+                "anonsay",
+                "anonreply",
+                "blacklist",
+                "giftshuffle",
+                "finalize",
+                "giftme",
+                "publishworks",
+            },
         )
 
     def test_status_boundaries_are_derived(self):
