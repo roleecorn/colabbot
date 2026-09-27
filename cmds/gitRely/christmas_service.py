@@ -420,6 +420,12 @@ class ChristmasService:
             and now >= event.private.blacklist_ends_at
         )
 
+    async def guesses_finalized(self) -> bool:
+        event = await self._event()
+        return self.repository.load_auxiliary(
+            event.public.event_key, "guess-scores.json", None
+        ) is not None
+
     async def all_gift_assignments(self) -> list[dict[str, Any]]:
         event = await self._event()
         data = self.repository.load_auxiliary(event.public.event_key, "gift-assignments.json", None)

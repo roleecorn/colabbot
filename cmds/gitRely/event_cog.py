@@ -964,7 +964,10 @@ class EventCog(Cog_extension):
             return
         await interaction.response.defer(thinking=True)
         try:
-            if await self.christmas_service.matching_locked():
+            if (
+                await self.christmas_service.matching_locked()
+                and not await self.christmas_service.guesses_finalized()
+            ):
                 raise ChristmasServiceError("報名表已鎖定，不能查看完整配對名單。")
             event = await self.event_service.load_active()
             participants = {item.discord_user_id: item for item in event.private.participants}
