@@ -138,6 +138,19 @@ class EventService:
             None,
         )
 
+    async def participant_by_number(
+        self, registration_number: int, *, include_withdrawn: bool = False
+    ) -> Participant | None:
+        event = await self.load_active()
+        return next(
+            (
+                item for item in event.private.participants
+                if item.registration_number == registration_number
+                and (include_withdrawn or not item.withdrawn)
+            ),
+            None,
+        )
+
     async def join(
         self,
         user_id: str,

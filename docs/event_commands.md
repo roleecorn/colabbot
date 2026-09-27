@@ -27,6 +27,11 @@ py .\bot2.py --token <TOKEN> --noBase --ext gitRely
 | `/blacklist add` | `registration_number` | 私訊機器人，依報名編號加入黑名單。 |
 | `/blacklist view` | 無 | 私訊機器人，查看黑名單編號與暱稱。 |
 | `/blacklist remove` | `registration_number` | 私訊機器人，移除指定編號。 |
+| `/sudo viewblacklist` | 無 | 主辦者私下查看全體黑名單。 |
+| `/sudo addblacklist` | `owner_number`、`target_number` | 主辦者手動加入黑名單，可超過一般使用者上限。 |
+| `/sudo removeblacklist` | `owner_number`、`target_number` | 編號為 0 時可批次清除；兩者不可同時為 0。 |
+| `/sudo kick` | `registration_number` | 取消指定報名，沿用原編號並同步報名留言。 |
+| `/sudo revertkick` | `registration_number` | 恢復已取消報名，沿用原編號並同步報名留言。 |
 | `/upload` | `file`、`title` 必填；`topic` 單題時可留空 | 安全解壓、建立預覽並完整覆蓋指定題目的作品；Git 發布失敗會回復舊版本。 |
 | `/clear` | `topic` 單題時可留空 | 清除自己的指定題目作品；Git 發布失敗會回復舊版本。 |
 

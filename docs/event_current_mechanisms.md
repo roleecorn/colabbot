@@ -1,6 +1,6 @@
 # 活動系統現行機制盤點
 
-盤點日期：2026-09-25。依據目前工作樹（包含既有未提交修改），不是只依 README 或舊架構提案。本文件描述已存在的程式行為；預定修改另見 [需求變更文件](event_requirements_plan.md)。未連線 Discord、Git remote 或啟動新的 Web Server。
+盤點日期：2026-09-27。依據目前工作樹與已提交的需求實作；不是只依 README 或舊架構提案。本文件描述已存在的程式行為；後續未完成需求另見原始需求文件。未連線 Discord、Git remote 或啟動新的 Web Server。
 
 ## 1. 入口、活動設定與權限
 
@@ -120,11 +120,13 @@ uploads/...
 
 EventRepository 使用原子 JSON 替換與程序內鎖，各服務另有 async lock。這不是已使用 SQLite 的活動系統；其他遊戲模組的 `.db` 不能當作活動 SQLite 已完成。也尚無活動 Web Server、preview token、OAuth session、猜作者資料表。
 
-## 7. 舊需求但現行尚未實作
+## 7. 原始需求實作狀態
 
-在目前載入的活動模組中，未見完整實作：`/signup` 表單與取消恢復、`/sudo` 系列管理、`/uploadovertime`、upload help、提交數公告、依收禮者發布作品與缺稿占位、`/guess` 系列與第二高排行、結算 CSV、揭曉及下載。
+已完成：分活動類型的 `/signup` modal、修改／退出／恢復及固定編號；報名留言與活動雜談通知；私訊 `/blacklist add/view/remove`、活動黑名單額度與獨立截止、主辦者白名單、`/sudo` 黑名單維護與 kick/revertkick。
 
-這些在原始需求文字中已存在，應標為「補齊舊需求」，不能描述成此次新提出的業務需求。舊文「沿用去年私信」僅有文字指涉，目前檢視的活動模組不能證明已具備該完整流程。
+仍待完成：`/sudo rollgroup`（需要本期實際組活規則）、`/sudo submitcount`、`/uploadovertime`、upload help、依收禮者發布作品與缺稿占位、`/guess` 系列與第二高排行、結算 CSV、揭曉及下載。
+
+以上在原始需求文字中已存在，屬於補齊舊需求，不是新提出的業務需求。舊文「沿用去年私信」僅有文字指涉，目前檢視的活動模組不能證明已具備該完整流程。
 
 ## 8. 驗證與文件落差
 

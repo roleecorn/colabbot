@@ -236,6 +236,57 @@ class ChristmasService:
             if item.discord_user_id in ids
         ]
 
+    async def sudo_view_blacklist(self) -> list[dict[str, Any]]:
+        event = await self._blacklist_event()
+        current = self._read_blacklist(event)
+        participants = {item.discord_user_id: item for item in event.private.participants}
+        rows = []
+        for owner_id, target_ids in current.items():
+            owner = participants.get(str(owner_id))
+            for target_id in target_ids:
+                target = participants.get(str(target_id))
+                rows.append({
+                    "owner_number": owner.registration_number if owner else None,
+                    "owner_name": owner.display_name if owner else "（已移除參加者）",
+                    "target_number": target.registration_number if target else None,
+                    "target_name": target.display_name if target else "（已移除參加者）",
+                })
+        return rows
+
+    async def sudo_change_blacklist(
+        self, owner_number: int, target_number: int, *, add: bool
+    ) -> None:
+        event = await self._blacklist_event()
+        if owner_number < 0 or target_number < 0 or (owner_number == target_number == 0):
+            raise ChristmasServiceError("編號不可為負數，且兩個編號不能同時為 0。")
+        participants = event.private.participants
+        by_number = {item.registration_number: item for item in participants}
+        owner = by_number.get(owner_number) if owner_number else None
+        target = by_number.get(target_number) if target_number else None
+        if owner_number and owner is None:
+            raise ChristmasServiceError("找不到黑名單持有者的報名編號。")
+        if target_number and target is None:
+            raise ChristmasServiceError("找不到目標參加者的報名編號。")
+        if add and (owner is None or target is None):
+            raise ChristmasServiceError("新增黑名單時兩個編號都必須大於 0。")
+        async with self._lock:
+            current = self._read_blacklist(event)
+            if add:
+                values = {str(value) for value in current.get(owner.discord_user_id, [])}
+                values.add(target.discord_user_id)
+                current[owner.discord_user_id] = sorted(values)
+            elif owner is None:
+                for key, values in current.items():
+                    current[key] = [str(value) for value in values
+                                    if str(value) != target.discord_user_id]
+            elif target is None:
+                current[owner.discord_user_id] = []
+            else:
+                values = {str(value) for value in current.get(owner.discord_user_id, [])}
+                values.discard(target.discord_user_id)
+                current[owner.discord_user_id] = sorted(values)
+            self.repository.save_auxiliary(event.public.event_key, "blacklist.json", current)
+
     async def _blocked_edges(self) -> set[tuple[str, str]]:
         event = await self._event()
         data = self.repository.load_auxiliary(event.public.event_key, "blacklist.json", {})

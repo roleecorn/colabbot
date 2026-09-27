@@ -19,7 +19,7 @@
 
 - `rules_2026` 的實際送禮配對函式與註冊。Christmas 活動在此函式加入前，
   `/giftshuffle` 不能完成配對。
-- 管理員專用的參加者編輯指令。需要修正名單時，請由維運人員依備份流程處理，
+- 主辦者直接編輯他人完整報名表的指令。`/sudo kick` 與 `/sudo revertkick` 已支援取消／恢復；其他欄位修正仍由維運人員依備份流程處理，
   不要直接在公開活動 repository 建立私密資料。
 
 ## 1. 活動目錄與資料邊界
@@ -144,7 +144,7 @@ Get-Content .\data\events\2026-spring\event-private.json
 
 ## 5. 報名階段 checklist
 
-主辦者名單由管理員透過 `/seteventadmins` 設定。活動頻道及黑名單設定、頭像同步、Christmas 配對等管理操作僅允許名單成員；活動啟用與名單維護仍由 Bot 管理員執行。
+主辦者名單由管理員透過 `/seteventadmins` 設定。活動頻道及黑名單設定、頭像同步、Christmas 配對、`/sudo` 黑名單修正與 kick/revertkick 等管理操作僅允許名單成員；活動啟用與名單維護仍由 Bot 管理員執行。
 
 主辦者在報名開始前：
 

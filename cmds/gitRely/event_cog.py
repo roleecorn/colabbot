@@ -28,6 +28,10 @@ logger = logging.getLogger(__name__)
 
 
 class EventCog(Cog_extension):
+    sudo_group = app_commands.Group(
+        name="sudo",
+        description="目前活動主辦者工具",
+    )
     blacklist_group = app_commands.Group(
         name="blacklist",
         description="管理 Christmas 活動黑名單（請在私訊使用）",
@@ -627,6 +631,116 @@ class EventCog(Cog_extension):
             await self._error(interaction, self._user_error(exc))
         except Exception as exc:
             await self._unexpected_error(interaction, "blacklist remove", exc)
+
+    async def _defer_sudo(self, interaction: discord.Interaction) -> bool:
+        if not await self._is_event_host(interaction):
+            await self._error(interaction, "只有目前活動的主辦人可以使用此指令。")
+            return False
+        await interaction.response.defer(thinking=True, ephemeral=True)
+        return True
+
+    @sudo_group.command(name="viewblacklist", description="查看目前所有人的黑名單")
+    async def sudo_viewblacklist(self, interaction: discord.Interaction):
+        if not await self._defer_sudo(interaction):
+            return
+        try:
+            rows = await self.christmas_service.sudo_view_blacklist()
+            if not rows:
+                await self._send(interaction, "目前沒有人設定黑名單。", ephemeral=True)
+                return
+            lines = [
+                f"[{row['owner_number'] or '?'}] {row['owner_name']} → "
+                f"[{row['target_number'] or '?'}] {row['target_name']}"
+                for row in rows
+            ]
+            page = ""
+            for line in lines:
+                if len(page) + len(line) + 1 > 1800:
+                    await self._send(interaction, page, ephemeral=True)
+                    page = ""
+                page += line + "\n"
+            if page:
+                await self._send(interaction, page, ephemeral=True)
+        except (ChristmasServiceError, OSError, ValueError) as exc:
+            await self._error(interaction, self._user_error(exc))
+        except Exception as exc:
+            await self._unexpected_error(interaction, "sudo viewblacklist", exc)
+
+    @sudo_group.command(name="addblacklist", description="手動加入黑名單（可覆蓋一般上限）")
+    @app_commands.describe(owner_number="黑名單持有者編號", target_number="被封鎖者編號")
+    async def sudo_addblacklist(
+        self, interaction: discord.Interaction, owner_number: int, target_number: int
+    ):
+        if not await self._defer_sudo(interaction):
+            return
+        try:
+            await self.christmas_service.sudo_change_blacklist(
+                owner_number, target_number, add=True
+            )
+            await self._send(interaction, "已手動加入黑名單。", ephemeral=True)
+        except (ChristmasServiceError, OSError, ValueError) as exc:
+            await self._error(interaction, self._user_error(exc))
+        except Exception as exc:
+            await self._unexpected_error(interaction, "sudo addblacklist", exc)
+
+    @sudo_group.command(name="removeblacklist", description="手動移除黑名單項目")
+    @app_commands.describe(owner_number="黑名單持有者編號（0 表示所有人）", target_number="被封鎖者編號（0 表示該持有者全部）")
+    async def sudo_removeblacklist(
+        self, interaction: discord.Interaction, owner_number: int, target_number: int
+    ):
+        if not await self._defer_sudo(interaction):
+            return
+        try:
+            await self.christmas_service.sudo_change_blacklist(
+                owner_number, target_number, add=False
+            )
+            await self._send(interaction, "已手動移除黑名單項目。", ephemeral=True)
+        except (ChristmasServiceError, OSError, ValueError) as exc:
+            await self._error(interaction, self._user_error(exc))
+        except Exception as exc:
+            await self._unexpected_error(interaction, "sudo removeblacklist", exc)
+
+    @sudo_group.command(name="kick", description="取消指定編號的報名")
+    @app_commands.describe(registration_number="要取消報名的編號")
+    async def sudo_kick(self, interaction: discord.Interaction, registration_number: int):
+        if not await self._defer_sudo(interaction):
+            return
+        try:
+            participant = await self.event_service.participant_by_number(registration_number)
+            if participant is None:
+                raise EventServiceError("找不到有效的報名編號。")
+            participant = await self.event_service.leave(participant.discord_user_id)
+            await self._publish_signup_record(participant)
+            await self._post_registration_status(participant, "取消了報名")
+            synced = await self._sync_participant_index(participant)
+            note = "" if synced else "公開名單同步失敗，請通知管理員。"
+            await self._send(interaction, f"已取消編號 {registration_number} 的報名。{note}", ephemeral=True)
+        except (ChristmasServiceError, EventServiceError, OSError, ValueError) as exc:
+            await self._error(interaction, self._user_error(exc))
+        except Exception as exc:
+            await self._unexpected_error(interaction, "sudo kick", exc)
+
+    @sudo_group.command(name="revertkick", description="恢復 kick 取消的報名")
+    @app_commands.describe(registration_number="要恢復報名的編號")
+    async def sudo_revertkick(self, interaction: discord.Interaction, registration_number: int):
+        if not await self._defer_sudo(interaction):
+            return
+        try:
+            participant = await self.event_service.participant_by_number(
+                registration_number, include_withdrawn=True
+            )
+            if participant is None:
+                raise EventServiceError("找不到這個報名編號。")
+            participant = await self.event_service.restore(participant.discord_user_id)
+            await self._publish_signup_record(participant)
+            await self._post_registration_status(participant, "恢復了報名")
+            synced = await self._sync_participant_index(participant)
+            note = "" if synced else "公開名單同步失敗，請通知管理員。"
+            await self._send(interaction, f"已恢復編號 {registration_number} 的報名。{note}", ephemeral=True)
+        except (ChristmasServiceError, EventServiceError, OSError, ValueError) as exc:
+            await self._error(interaction, self._user_error(exc))
+        except Exception as exc:
+            await self._unexpected_error(interaction, "sudo revertkick", exc)
 
     @christmas_group.command(name="giftshuffle", description="依活動規則產生送禮配對")
     async def gift_shuffle(self, interaction: discord.Interaction):
