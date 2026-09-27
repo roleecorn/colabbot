@@ -819,6 +819,31 @@ class EventCog(Cog_extension):
         except Exception as exc:
             await self._unexpected_error(interaction, "sudo revertkick", exc)
 
+    @sudo_group.command(name="submitcount", description="在目前頻道公布已提交作品數量")
+    async def sudo_submitcount(self, interaction: discord.Interaction):
+        if not await self._is_event_host(interaction):
+            await self._error(interaction, "只有目前活動的主辦人可以公布投稿數量。")
+            return
+        await interaction.response.defer(thinking=True)
+        try:
+            counts = await self.submission_service.count_submissions()
+            details = [
+                f"{name}：{count}"
+                for name, count in counts.items()
+                if name not in {"total", "expected"}
+            ]
+            content = (
+                f"目前已提交 {counts['total']} 件作品，"
+                f"共 {counts['expected']} 個投稿名額。"
+            )
+            if len(details) > 1:
+                content += "\n" + "\n".join(details)
+            await self._send(interaction, content)
+        except (SubmissionServiceError, EventServiceError, OSError, ValueError) as exc:
+            await self._error(interaction, self._user_error(exc))
+        except Exception as exc:
+            await self._unexpected_error(interaction, "sudo submitcount", exc)
+
     @christmas_group.command(name="giftshuffle", description="依活動規則產生送禮配對")
     async def gift_shuffle(self, interaction: discord.Interaction):
         if not await self._is_event_host(interaction):

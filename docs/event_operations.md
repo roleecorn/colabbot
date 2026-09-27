@@ -199,6 +199,8 @@ Get-Content .\data\events\2026-spring\event-private.json
 
 # 多題活動
 /upload file:<作品.zip> title:<作品標題> topic:<題目>
+
+# 使用 /upload 的 help:true 取得互動說明；投稿截止後使用 /uploadovertime
 ```
 
 目前支援 `.zip`、`.rar`、`.7z`。部署環境必須同時具備對應的解壓套件；不確定時優先使用
@@ -234,6 +236,7 @@ https://aafanclubdc.github.io/<event_key>/pieces/<participant_key>/<topic_key>/
 - [ ] Pages 可以開啟 `index.html`。
 - [ ] 新作品內容完整，沒有殘留舊版本檔案。
 - [ ] `git log` 有本次 commit，remote 已更新。
+- [ ] 接近投稿截止時，每日一次在活動頻道執行 `/sudo submitcount` 公布目前作品數量。
 
 ## 7. 清除作品
 

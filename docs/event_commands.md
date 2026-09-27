@@ -32,6 +32,7 @@ py .\bot2.py --token <TOKEN> --noBase --ext gitRely
 | `/sudo removeblacklist` | `owner_number`、`target_number` | 編號為 0 時可批次清除；兩者不可同時為 0。 |
 | `/sudo kick` | `registration_number` | 取消指定報名，沿用原編號並同步報名留言。 |
 | `/sudo revertkick` | `registration_number` | 恢復已取消報名，沿用原編號並同步報名留言。 |
+| `/sudo submitcount` | 無 | 主辦者在目前頻道公開目前已提交作品數量。 |
 | `/upload` | `file`、`title`；`topic` 單題時可留空；`help=true` 顯示說明 | 投稿期間安全解壓、建立預覽並完整覆蓋指定題目的作品；Git 發布失敗會回復舊版本。 |
 | `/uploadovertime` | `file`、`title`；`topic` 單題時可留空 | 投稿截止後上傳或更新作品；公開索引標記超時，Christmas 活動並通知雜談區。 |
 | `/clear` | `topic` 單題時可留空 | 清除自己的指定題目作品；Git 發布失敗會回復舊版本。 |

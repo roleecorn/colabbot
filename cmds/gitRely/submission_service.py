@@ -212,3 +212,26 @@ class SubmissionService:
                 if backup and Path(backup).exists():
                     await asyncio.to_thread(self.storage.discard_backup, backup)
                 await asyncio.to_thread(self.storage.cleanup, request_dir)
+
+    async def count_submissions(self) -> dict[str, int]:
+        """Count currently published participant/topic entries by topic."""
+        event = await self.events.load_active()
+        _, work_path = self.public_index._paths(event.public.event_key)
+        works = await asyncio.to_thread(self.public_index._read_list, work_path)
+        normalised = self.public_index._normalise_works(
+            works, event.private.participants, event.public.topics
+        )
+        seen: set[tuple[str, str]] = set()
+        counts = {topic.key: 0 for topic in event.public.topics}
+        for work in normalised:
+            key = (work["hashId"], work["topicKey"])
+            if key in seen:
+                continue
+            seen.add(key)
+            counts[work["topicKey"]] += 1
+        result = {topic.name: counts[topic.key] for topic in event.public.topics}
+        result["total"] = sum(counts.values())
+        result["expected"] = sum(
+            not item.withdrawn for item in event.private.participants
+        ) * len(event.public.topics)
+        return result
