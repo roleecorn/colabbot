@@ -277,6 +277,10 @@ https://aafanclubdc.github.io/<event_key>/pieces/<participant_key>/<topic_key>/
   /christmas giftme
   /group view
   /group viewall
+  /guess set recipient_number:<編號> author_number:<編號或 0>
+  /guess viewall
+  /guess seeinvalid
+  /guess seesecond recipient_number:<可留空>
   /christmas publishworks channel:<作品連結頻道>
 ```
 

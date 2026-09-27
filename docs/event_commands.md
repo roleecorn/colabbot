@@ -52,6 +52,10 @@ Christmas 專用指令會集中在 `/christmas` 群組下：
 | `/christmas giftme` | 無 | 相容入口，只回覆自己的收禮者，不會揭露送禮者。 |
 | `/group view` | 無 | 私訊機器人，查看自己的收禮者報名表。 |
 | `/group viewall` | 無 | 配對／名單鎖定前私訊查看所有配對；鎖定後停用。 |
+| `/guess set` | `recipient_number`、`author_number`（0 移除） | 私訊提交或移除一筆作者猜測。 |
+| `/guess viewall` | 無 | 私訊查看自己的所有猜測。 |
+| `/guess seeinvalid` | 無 | 私訊查看未猜、猜自己或重複猜同一作者的項目。 |
+| `/guess seesecond` | `recipient_number` 選填 | 私訊查看全部或指定作品的第二多猜測。 |
 | `/christmas publishworks` | `channel` | 投稿截止後依收禮者編號公開作品；缺稿顯示「被咕了」，不公開作者編號或暱稱。 |
 
 ## 報名表單欄位

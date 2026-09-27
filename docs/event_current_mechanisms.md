@@ -110,6 +110,8 @@ data/events/<event>/event-private.json
 data/events/<event>/anonymous-messages.json
 data/events/<event>/blacklist.json
 data/events/<event>/gift-assignments.json
+data/events/<event>/guesses.json
+data/events/<event>/published-works.json
 <event>/event-public.json
 <event>/data/playerHashMap.json
 <event>/data/workUserMap.json
@@ -124,7 +126,7 @@ EventRepository 使用原子 JSON 替換與程序內鎖，各服務另有 async 
 
 已完成：分活動類型的 `/signup` modal、修改／退出／恢復及固定編號；報名留言與活動雜談通知；私訊 `/blacklist add/view/remove`、活動黑名單額度與獨立截止、主辦者白名單、`/sudo` 黑名單維護與 kick/revertkick。
 
-仍待完成：`/sudo rollgroup`（需要本期實際組活規則）、`/group` 組活結果查看／下載、`/guess` 系列與第二高排行、結算 CSV、揭曉及下載。
+仍待完成：`/sudo rollgroup`（需要本期實際組活規則）、`/group` 組活結果查看／下載、活動結束結算 CSV、揭曉及下載。
 
 以上在原始需求文字中已存在，屬於補齊舊需求，不是新提出的業務需求。舊文「沿用去年私信」僅有文字指涉，目前檢視的活動模組不能證明已具備該完整流程。
 

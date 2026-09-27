@@ -424,3 +424,153 @@ class ChristmasService:
         if not isinstance(data, dict) or not isinstance(data.get("assignments"), list):
             raise ChristmasServiceError("目前還沒有可公開的送禮配對結果。")
         return data["assignments"]
+
+    def _load_guesses(self, event) -> dict[str, dict[str, int]]:
+        data = self.repository.load_auxiliary(event.public.event_key, "guesses.json", {})
+        if not isinstance(data, dict):
+            raise ChristmasServiceError("猜測資料異常，請通知管理員。")
+        raw = data.get("guesses", {})
+        if not isinstance(raw, dict):
+            raise ChristmasServiceError("猜測資料異常，請通知管理員。")
+        guesses: dict[str, dict[str, int]] = {}
+        try:
+            for owner, values in raw.items():
+                if not isinstance(values, dict):
+                    raise ValueError
+                guesses[str(owner)] = {str(key): int(value) for key, value in values.items()}
+        except (TypeError, ValueError) as exc:
+            raise ChristmasServiceError("猜測資料異常，請通知管理員。") from exc
+        return guesses
+
+    @staticmethod
+    def _second_guess(event, guesses: dict[str, dict[str, int]], recipient_number: int):
+        active = [item for item in event.private.participants if not item.withdrawn]
+        recipient = next(
+            (item for item in active if item.registration_number == recipient_number), None
+        )
+        if recipient is None:
+            raise ChristmasServiceError("找不到這個有效收禮者編號。")
+        counts = {item.registration_number: 0 for item in active}
+        for votes in guesses.values():
+            guessed_number = votes.get(str(recipient_number))
+            if guessed_number in counts:
+                counts[guessed_number] += 1
+        ranked = sorted(counts, key=lambda number: (-counts[number], number))
+        if len(ranked) < 2 or counts[ranked[1]] == 0:
+            return None
+        return next(item for item in active if item.registration_number == ranked[1])
+
+    async def set_guess(
+        self, owner_id: str, recipient_number: int, author_number: int
+    ) -> dict[str, Any] | None:
+        event = await self._event()
+        final = self.repository.load_auxiliary(event.public.event_key, "guess-scores.json", None)
+        if final is not None:
+            raise ChristmasServiceError("猜測已鎖定，活動結算後不能再修改。")
+        active = [item for item in event.private.participants if not item.withdrawn]
+        numbers = {item.registration_number for item in active}
+        if recipient_number not in numbers:
+            raise ChristmasServiceError("收禮者編號不在目前有效報名名單中。")
+        if author_number != 0 and author_number not in numbers:
+            raise ChristmasServiceError("猜測作者編號不在目前有效報名名單中。")
+        async with self._lock:
+            guesses = self._load_guesses(event)
+            old = self._second_guess(event, guesses, recipient_number)
+            by_recipient = guesses.setdefault(str(owner_id), {})
+            if author_number == 0:
+                by_recipient.pop(str(recipient_number), None)
+            else:
+                by_recipient[str(recipient_number)] = author_number
+            if not by_recipient:
+                guesses.pop(str(owner_id), None)
+            self.repository.save_auxiliary(
+                event.public.event_key,
+                "guesses.json",
+                {"schema_version": 1, "guesses": guesses},
+            )
+            new = self._second_guess(event, guesses, recipient_number)
+            if old == new:
+                return None
+            return {"recipient": next(
+                item for item in active if item.registration_number == recipient_number
+            ), "old": old, "new": new}
+
+    async def guesses_for(self, owner_id: str) -> list[dict[str, Any]]:
+        event = await self._event()
+        guesses = self._load_guesses(event).get(str(owner_id), {})
+        active = sorted(
+            (item for item in event.private.participants if not item.withdrawn),
+            key=lambda item: item.registration_number,
+        )
+        by_number = {item.registration_number: item for item in active}
+        return [
+            {"recipient": recipient, "author": by_number.get(guesses.get(str(recipient.registration_number)))}
+            for recipient in active
+        ]
+
+    async def invalid_guesses_for(self, owner_id: str) -> list[dict[str, Any]]:
+        entries = await self.guesses_for(owner_id)
+        author_counts: dict[int, int] = {}
+        for entry in entries:
+            author = entry["author"]
+            if author:
+                author_counts[author.registration_number] = (
+                    author_counts.get(author.registration_number, 0) + 1
+                )
+        return [
+            entry for entry in entries
+            if entry["author"] is None
+            or entry["author"].registration_number == entry["recipient"].registration_number
+            or author_counts.get(entry["author"].registration_number, 0) > 1
+        ]
+
+    async def second_guesses(self, recipient_number: int | None = None) -> list[dict[str, Any]]:
+        event = await self._event()
+        guesses = self._load_guesses(event)
+        recipients = sorted(
+            (item for item in event.private.participants if not item.withdrawn),
+            key=lambda item: item.registration_number,
+        )
+        if recipient_number is not None:
+            recipients = [item for item in recipients if item.registration_number == recipient_number]
+            if not recipients:
+                raise ChristmasServiceError("找不到這個有效收禮者編號。")
+        return [
+            {
+                "recipient": recipient,
+                "author": self._second_guess(event, guesses, recipient.registration_number),
+            }
+            for recipient in recipients
+        ]
+
+    async def bind_published_work(
+        self, recipient_number: int, channel_id: str, message_id: str
+    ) -> None:
+        event = await self._event()
+        data = self.repository.load_auxiliary(
+            event.public.event_key, "published-works.json", {}
+        )
+        if not isinstance(data, dict):
+            raise ChristmasServiceError("作品留言對照資料異常，請通知管理員。")
+        entries = data.get(str(recipient_number), [])
+        if not isinstance(entries, list):
+            raise ChristmasServiceError("作品留言對照資料異常，請通知管理員。")
+        entries = [item for item in entries if not (
+            isinstance(item, dict) and item.get("channel_id") == str(channel_id)
+            and item.get("message_id") == str(message_id)
+        )]
+        entries.append({"channel_id": str(channel_id), "message_id": str(message_id)})
+        data[str(recipient_number)] = entries
+        self.repository.save_auxiliary(event.public.event_key, "published-works.json", data)
+
+    async def published_work_messages(self, recipient_number: int) -> list[dict[str, str]]:
+        event = await self._event()
+        data = self.repository.load_auxiliary(
+            event.public.event_key, "published-works.json", {}
+        )
+        if not isinstance(data, dict):
+            raise ChristmasServiceError("作品留言對照資料異常，請通知管理員。")
+        entries = data.get(str(recipient_number), [])
+        if not isinstance(entries, list):
+            raise ChristmasServiceError("作品留言對照資料異常，請通知管理員。")
+        return [item for item in entries if isinstance(item, dict)]
