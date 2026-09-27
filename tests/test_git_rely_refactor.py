@@ -120,6 +120,7 @@ class EventRefactorTests(unittest.TestCase):
             (TimeoutError("secret endpoint"), "連線等待逾時"),
             (PermissionError("private path"), "無法存取所需的活動檔案或目錄"),
             (FileNotFoundError("private path"), "找不到必要的活動資料或檔案"),
+            (GitPublishError("remote: Permission denied (403)"), "GitHub 拒絕機器人帳號的寫入權限"),
             (RuntimeError("private details"), "系統內部處理失敗"),
         )
         for error, expected in cases:

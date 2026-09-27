@@ -25,6 +25,7 @@ from .event_service import EventService, EventServiceError
 from .models import EventType
 from .repositories import EventRepository
 from .submission_service import SubmissionService, SubmissionServiceError
+from .publisher import GitPublishError
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +87,15 @@ class EventCog(Cog_extension):
     @staticmethod
     def _unexpected_error_message(exc: Exception, error_id: str) -> str:
         suffix = f"（錯誤編號：{error_id}）"
+        if isinstance(exc, GitPublishError):
+            details = str(exc).lower()
+            if "403" in details or "permission to " in details or "denied to " in details:
+                return (
+                    "無法發布活動公開資料：GitHub 拒絕機器人帳號的寫入權限。"
+                    "請管理員確認目標 repository 已授予機器人使用的 GitHub 帳號或憑證 Write 權限。"
+                    + suffix
+                )
+            return "無法發布活動公開資料；請管理員檢查 GitHub repository、網路連線及同步狀態。" + suffix
         if isinstance(exc, discord.Forbidden):
             return "機器人缺少執行此操作所需的 Discord 權限；請管理員檢查頻道與機器人權限。" + suffix
         if isinstance(exc, discord.NotFound):
