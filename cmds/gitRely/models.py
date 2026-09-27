@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 class EventType(str, Enum):
     SUBMISSION = "submission"
     CHRISTMAS = "christmas"
+    GROUP = "group"
 
 
 class EventStatus(str, Enum):
@@ -83,6 +84,11 @@ class Participant:
     avatar_path: str = ""
     registration_number: int = 0
     withdrawn: bool = False
+    aa_image: str = ""
+    team_leader: bool | None = None
+    notes: str = ""
+    signup_channel_id: str = ""
+    signup_message_id: str = ""
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "Participant":
@@ -94,6 +100,11 @@ class Participant:
             avatar_path=str(data.get("avatar_path", "")),
             registration_number=int(data.get("registration_number", 0)),
             withdrawn=bool(data.get("withdrawn", False)),
+            aa_image=str(data.get("aa_image", "")),
+            team_leader=data.get("team_leader") if isinstance(data.get("team_leader"), bool) else None,
+            notes=str(data.get("notes", "")),
+            signup_channel_id=str(data.get("signup_channel_id", "")),
+            signup_message_id=str(data.get("signup_message_id", "")),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -108,6 +119,16 @@ class Participant:
             data["display_name"] = self.display_name
         if self.avatar_path:
             data["avatar_path"] = self.avatar_path
+        if self.aa_image:
+            data["aa_image"] = self.aa_image
+        if self.team_leader is not None:
+            data["team_leader"] = self.team_leader
+        if self.notes:
+            data["notes"] = self.notes
+        if self.signup_channel_id:
+            data["signup_channel_id"] = self.signup_channel_id
+        if self.signup_message_id:
+            data["signup_message_id"] = self.signup_message_id
         return data
 
 
@@ -126,7 +147,7 @@ class EventPublic:
         try:
             self.event_type = EventType(self.event_type)
         except ValueError as exc:
-            raise ValueError("event_type must be submission or christmas") from exc
+            raise ValueError("event_type must be submission, christmas or group") from exc
         try:
             ZoneInfo(self.timezone)
         except ZoneInfoNotFoundError as exc:
@@ -149,7 +170,7 @@ class EventPublic:
         try:
             event_type = EventType(_required_string(data, "event_type"))
         except ValueError as exc:
-            raise ValueError("event_type must be submission or christmas") from exc
+            raise ValueError("event_type must be submission, christmas or group") from exc
         result = cls(
             event_key=_required_string(data, "event_key"),
             display_name=_required_string(data, "display_name"),
@@ -181,6 +202,7 @@ class EventPrivate:
     registration_ends_at: datetime
     submission_starts_at: datetime
     submission_ends_at: datetime
+    discussion_channel_id: str | None = None
     participants: list[Participant] = field(default_factory=list)
     matching_policy: str | None = None
     schema_version: int = 1
@@ -188,6 +210,8 @@ class EventPrivate:
     def validate(self, public: EventPublic | None = None) -> None:
         _safe_key(_required_string({"value": self.event_key}, "value"), "event key")
         _required_string({"value": self.registration_channel_id}, "value")
+        if self.discussion_channel_id is not None:
+            _required_string({"value": self.discussion_channel_id}, "value")
         dates = [
             self.registration_starts_at,
             self.registration_ends_at,
@@ -229,6 +253,10 @@ class EventPrivate:
         result = cls(
             event_key=_required_string(data, "event_key"),
             registration_channel_id=_required_string(data, "registration_channel_id"),
+            discussion_channel_id=(
+                str(data["discussion_channel_id"])
+                if data.get("discussion_channel_id") is not None else None
+            ),
             registration_starts_at=_parse_datetime(
                 data.get("registration_starts_at"), "registration_starts_at"
             ),
@@ -263,6 +291,8 @@ class EventPrivate:
             "submission_ends_at": _datetime_json(self.submission_ends_at),
             "participants": [participant.to_dict() for participant in self.participants],
         }
+        if self.discussion_channel_id:
+            data["discussion_channel_id"] = self.discussion_channel_id
         if self.matching_policy:
             data["matching_policy"] = self.matching_policy
         return data

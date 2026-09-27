@@ -19,7 +19,9 @@ py .\bot2.py --token <TOKEN> --noBase --ext gitRely
 | 指令 | 參數 | 說明 |
 |---|---|---|
 | `/seteventname` | `event_name`、`event_type`、`timezone`、四個時間欄位、`topics` | 驗證並啟用唯一活動；時間接受 ISO datetime 或 `yyyymmdd-HHMM`。 |
-| `/event` | `action=join/leave` | 在報名期間報名或退出；報名時產生隨機 `participant_key`。 |
+| `/seteventchannels` | `discussion_channel` | 設定活動雜談區；報名修改、退出及恢復的狀態通知會發到這裡。 |
+| `/signup` | `action=join/edit/quit/restore` | `join` 開啟活動表單；`edit` 修改欄位並更新原報名留言；`quit` 保留原編號取消；`restore` 用原編號恢復。可在指定伺服器內任何文字頻道使用。 |
+| `/event` | `action=join/edit/leave/restore` | `/signup` 的相容入口；`leave` 等同 `quit`。 |
 | `/upload` | `file`、`title` 必填；`topic` 單題時可留空 | 安全解壓、建立預覽並完整覆蓋指定題目的作品；Git 發布失敗會回復舊版本。 |
 | `/clear` | `topic` 單題時可留空 | 清除自己的指定題目作品；Git 發布失敗會回復舊版本。 |
 
@@ -34,6 +36,16 @@ Christmas 專用指令會集中在 `/christmas` 群組下：
 | `/christmas anonreply` | `message_id`、`content` | 匿名回覆指定訊息。 |
 | `/christmas giftshuffle` | 無 | 管理員依活動指定策略產生一次配對；已有結果時拒絕重抽。 |
 | `/christmas giftme` | 無 | 查看配對策略允許目前使用者看到的結果。 |
+
+## 報名表單欄位
+
+| 活動類型 | 必填欄位 | 選填欄位 |
+|---|---|---|
+| `submission` | 活動暱稱 | 備註 |
+| `christmas` | 活動暱稱、AA 形象 | 備註 |
+| `group` | 活動暱稱、AA 形象、是否報名組長（是／否） | 備註 |
+
+Discord ID 由 Discord 自動取得。首次成功報名時發固定編號，公開報名留言送到活動設定時指定的報名頻道；再次使用 `edit` 時只填要修改的欄位、留白欄位保留原值，並修改原留言及在活動雜談區通知。取消時原留言和雜談區都會標示取消；恢復時原留言還原為完整報名表並通知雜談區。取消者不參與投稿與新配對名單，恢復時保留原編號。管理員須先執行 `/seteventchannels` 設定雜談區。
 
 ## 注意事項
 

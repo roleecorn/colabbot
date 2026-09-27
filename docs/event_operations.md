@@ -10,6 +10,7 @@
 
 - 單一 `EventCog`，同一時間只啟用一個活動。
 - `submission` 一般投稿活動，支援單題與多題。
+- `christmas` 與 `group` 報名表單可依活動類型收集欄位；報名編號固定，取消可恢復。
 - `christmas` 活動的報名、匿名訊息、匿名回覆與黑名單資料邊界。
 - 隨機 `participant_key`、私密 JSON、安全解壓與覆蓋式投稿。
 - Git 發布失敗時回復舊作品。
@@ -69,7 +70,8 @@ py .\bot2.py --token <TOKEN> --noBase --ext gitRely
 
 - [ ] Console 顯示 Bot 已登入。
 - [ ] Discord slash command 同步完成。
-- [ ] `/seteventname`、`/event`、`/upload`、`/clear` 出現在指令清單。
+- [ ] `/seteventname`、`/signup`、`/event`、`/upload`、`/clear` 出現在指令清單。
+- [ ] 確認管理員可用 `/seteventchannels` 設定活動雜談區。
 - [ ] 沒有同時載入 `gitRely.event`、`gitRely.event_multi` 或其他會註冊同名指令的 extension。
 
 若只要直接載入 Cog，也可以使用 `--ext gitRely.event_cog`；兩者擇一即可。
@@ -101,6 +103,8 @@ py .\bot2.py --token <TOKEN> --noBase --ext gitRely
 4. 原子更新 `data/active-event.json`。
 5. 將執行指令的頻道記為 `registration_channel_id`。
 
+之後執行 `/seteventchannels`，選擇活動雜談區，以接收報名修改／退出／恢復通知。
+
 啟用後在本機驗證：
 
 ```powershell
@@ -128,7 +132,7 @@ Get-Content .\data\events\2026-spring\event-private.json
 | 狀態 | 時間條件 | 參加者可做的事 |
 |---|---|---|
 | `scheduled` | 報名開始前 | 無 |
-| `registration_open` | 報名開始後、報名截止前 | `/event join`、`/event leave` |
+| `registration_open` | 報名開始後、報名截止前 | `/signup join/edit/quit/restore` |
 | `waiting_submission` | 報名截止後、投稿開始前 | 無 |
 | `submission_open` | 投稿開始後、投稿截止前 | `/upload`、`/clear` |
 | `closed` | 投稿截止後 | 查詢；不能上傳或清除 |
@@ -149,15 +153,24 @@ Get-Content .\data\events\2026-spring\event-private.json
 ```text
 /event action:join
 /event action:leave
+
+# 活動表單與退出／恢復（建議使用新入口）
+/signup action:join
+/signup action:edit
+/signup action:quit
+/signup action:restore
 ```
 
 注意：
 
-- 必須在設定活動時使用的報名頻道執行。
-- `/event join` 只能在 `registration_open` 使用。
+- 可在指定伺服器內任何文字頻道執行；報名公告會送到 `/seteventname` 設定時所在的報名頻道。
+- `/signup join/edit/quit/restore` 只能在 `registration_open` 使用。
+- `submission` 必填活動暱稱；`christmas` 另需 AA 形象；`group` 另需 AA 形象及組長意願。
+- 首次報名取得下一個固定編號；退出不刪資料、不釋放編號，恢復沿用原編號。
+- 修改表單會更新原報名留言；如留言遭刪除，Bot 會補發新留言。
 - 回覆為 ephemeral，不會公開 `participant_key`。
 - `participant_key` 只存在 private JSON 與作品路徑，不要貼到公開頻道。
-- 報名截止後不能退出，避免影響後續配對或名單一致性。
+- 報名截止後不能退出或恢復，避免名單截止後改變。
 
 管理員在報名結束後確認：
 

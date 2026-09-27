@@ -132,7 +132,7 @@ class EventCog(Cog_extension):
     @app_commands.command(name="seteventname", description="啟用並設定唯一活動")
     @app_commands.describe(
         event_name="活動代碼（也會作為公開顯示名稱）",
-        event_type="submission 或 christmas",
+        event_type="submission、christmas 或 group",
         timezone="IANA 時區，例如 Asia/Taipei",
         registration_starts_at="報名開始（ISO 時間或 yyyymmdd-HHMM）",
         registration_ends_at="報名截止（ISO 時間或 yyyymmdd-HHMM）",
@@ -144,6 +144,7 @@ class EventCog(Cog_extension):
         event_type=[
             app_commands.Choice(name="submission", value="submission"),
             app_commands.Choice(name="christmas", value="christmas"),
+            app_commands.Choice(name="group", value="group"),
         ]
     )
     async def set_event_name(
@@ -180,36 +181,67 @@ class EventCog(Cog_extension):
             return
         await self._send(interaction, f"已啟用活動 `{event.public.event_key}`。")
 
-    @app_commands.command(name="event", description="報名、退出或恢復活動報名")
+    @app_commands.command(name="seteventchannels", description="設定活動雜談區")
+    @app_commands.describe(discussion_channel="活動雜談與狀態更新要發送的頻道")
+    async def set_event_channels(
+        self, interaction: discord.Interaction, discussion_channel: discord.TextChannel
+    ):
+        if not self._is_admin(interaction):
+            await self._error(interaction, "只有管理員可以設定活動頻道。")
+            return
+        try:
+            await self.event_service.set_discussion_channel(str(discussion_channel.id))
+            await self._send(interaction, f"活動雜談區已設定為 {discussion_channel.mention}。")
+        except (EventServiceError, OSError, ValueError) as exc:
+            await self._error(interaction, self._user_error(exc))
+        except Exception as exc:
+            await self._unexpected_error(interaction, "seteventchannels", exc)
+
+    @app_commands.command(name="event", description="報名、修改、退出或恢復活動報名")
     @app_commands.choices(
         action=[
             app_commands.Choice(name="join", value="join"),
+            app_commands.Choice(name="edit", value="edit"),
             app_commands.Choice(name="leave", value="leave"),
             app_commands.Choice(name="restore", value="restore"),
         ]
     )
     async def event(self, interaction: discord.Interaction, action: str):
+        await self._signup_action(interaction, action)
+
+    @app_commands.command(name="signup", description="報名、修改、退出或恢復活動報名")
+    @app_commands.choices(
+        action=[
+            app_commands.Choice(name="join", value="join"),
+            app_commands.Choice(name="edit", value="edit"),
+            app_commands.Choice(name="quit", value="quit"),
+            app_commands.Choice(name="restore", value="restore"),
+        ]
+    )
+    async def signup(self, interaction: discord.Interaction, action: str):
+        await self._signup_action(interaction, action)
+
+    async def _signup_action(self, interaction: discord.Interaction, action: str):
         if not interaction.guild or not self.bIsAAFanclub(interaction):
             await self._error(interaction, "此指令只能在指定伺服器使用。")
             return
         try:
+            if action in {"join", "edit"}:
+                active = await self.event_service.load_active()
+                existing = await self.event_service.participant(str(interaction.user.id))
+                if action == "join" and existing:
+                    raise EventServiceError("你已經報名；請使用 `/signup action:edit` 修改資料。")
+                if action == "edit" and existing is None:
+                    raise EventServiceError("找不到有效的報名資料，請先報名。")
+                await interaction.response.send_modal(
+                    SignupModal(self, active.public.event_type, existing)
+                )
+                return
             await interaction.response.defer(thinking=True)
-            if action == "join":
-                participant = await self.event_service.join(str(interaction.user.id), interaction.user.name)
-                try:
-                    await self._publish_participant_avatar(participant, interaction.user)
-                    message = f"報名成功，編號為 {participant.registration_number}。"
-                except (AvatarServiceError, EventServiceError, OSError, ValueError):
-                    logger.warning("Could not sync avatar for participant %s", participant.discord_user_id, exc_info=True)
-                    message = (
-                        f"報名成功，編號為 {participant.registration_number}，"
-                        "但頭像同步失敗，管理員可稍後重新同步。"
-                    )
-                # The participant key is private mapping data and must never
-                # be exposed in a public channel.
-                await self._send(interaction, message, ephemeral=True)
-            elif action == "leave":
+            if action in {"leave", "quit"}:
                 participant = await self.event_service.leave(str(interaction.user.id))
+                await self._publish_signup_record(participant)
+                await self._post_registration_status(participant, "取消了報名")
                 synced = await self._sync_participant_index(participant)
                 message = f"編號 {participant.registration_number} 已取消報名；恢復時會保留原編號。"
                 if not synced:
@@ -217,13 +249,15 @@ class EventCog(Cog_extension):
                 await self._send(interaction, message, ephemeral=True)
             elif action == "restore":
                 participant = await self.event_service.restore(str(interaction.user.id))
+                await self._publish_signup_record(participant)
+                await self._post_registration_status(participant, "恢復了報名")
                 synced = await self._sync_participant_index(participant)
                 message = f"已恢復報名，沿用編號 {participant.registration_number}。"
                 if not synced:
                     message += "公開名單同步失敗，請通知管理員。"
                 await self._send(interaction, message, ephemeral=True)
             else:
-                raise EventServiceError("請選擇 join、leave 或 restore。")
+                raise EventServiceError("請選擇 join、edit、quit 或 restore。")
         except (EventServiceError, OSError, ValueError) as exc:
             await self._error(interaction, self._user_error(exc))
         except Exception as exc:
@@ -231,17 +265,76 @@ class EventCog(Cog_extension):
 
     async def _publish_participant_avatar(self, participant, user) -> None:
         await self.avatar_service.sync_participant(participant.discord_user_id, user.display_avatar)
+        await self._publish_participant_index(
+            participant, f"Update participant avatar ({participant.registration_number})"
+        )
+
+    async def _publish_participant_index(self, participant, message: str) -> None:
         event = await self.event_service.load_active()
         index = self.submission_service.public_index
         snapshot = await asyncio.to_thread(index.sync_participants, event)
         try:
             await self.submission_service.publisher.publish(
                 self.repository.public_dir(event.public.event_key),
-                f"Update participant avatar ({participant.display_name or participant.discord_user_id})",
+                message,
             )
         except Exception:
             await asyncio.to_thread(index.restore, snapshot)
             raise
+
+    async def _publish_signup_record(self, participant) -> None:
+        event = await self.event_service.load_active()
+        channel_id = int(event.private.registration_channel_id)
+        channel = self.bot.get_channel(channel_id) or await self.bot.fetch_channel(channel_id)
+        if participant.withdrawn:
+            content = (
+                f"[{participant.registration_number}]的報名者"
+                f"{participant.display_name}取消了報名。"
+            )
+        else:
+            lines = [
+            f"[{participant.registration_number}]",
+            f"暱稱：{participant.display_name}",
+            ]
+            if participant.aa_image:
+                lines.append(f"AA形象：{participant.aa_image}")
+            if participant.team_leader is not None:
+                lines.append(f"是否報名組長：{'是' if participant.team_leader else '否'}")
+            if participant.notes:
+                lines.append(f"備註：{participant.notes}")
+            content = "\n".join(lines)
+        if participant.signup_message_id and participant.signup_channel_id:
+            try:
+                previous_channel = (
+                    self.bot.get_channel(int(participant.signup_channel_id))
+                    or await self.bot.fetch_channel(int(participant.signup_channel_id))
+                )
+                previous = await previous_channel.fetch_message(int(participant.signup_message_id))
+                await previous.edit(content=content, allowed_mentions=discord.AllowedMentions.none())
+                return
+            except discord.NotFound:
+                logger.info(
+                    "Signup message %s is missing; posting a replacement",
+                    participant.signup_message_id,
+                )
+        sent = await channel.send(
+            content,
+            allowed_mentions=discord.AllowedMentions.none(),
+        )
+        await self.event_service.set_signup_message(
+            participant.discord_user_id, str(channel.id), str(sent.id)
+        )
+
+    async def _post_registration_status(self, participant, status: str) -> None:
+        event = await self.event_service.load_active()
+        channel_id = event.private.discussion_channel_id
+        if not channel_id:
+            raise EventServiceError("尚未設定活動雜談區，請通知管理員。")
+        channel = self.bot.get_channel(int(channel_id)) or await self.bot.fetch_channel(int(channel_id))
+        await channel.send(
+            f"[{participant.registration_number}]的報名者{participant.display_name}{status}。",
+            allowed_mentions=discord.AllowedMentions.none(),
+        )
 
     async def _sync_participant_index(self, participant) -> bool:
         event = await self.event_service.load_active()
@@ -449,6 +542,140 @@ class EventCog(Cog_extension):
             await self._error(interaction, self._user_error(exc))
         except Exception as exc:
             await self._unexpected_error(interaction, "giftme", exc)
+
+
+class SignupModal(discord.ui.Modal):
+    def __init__(self, cog: EventCog, event_type: EventType, participant=None) -> None:
+        self.cog = cog
+        self.event_type = event_type
+        self.participant = participant
+        super().__init__(
+            title="修改活動報名" if participant else "活動報名",
+            timeout=300,
+        )
+        self.nickname = discord.ui.TextInput(
+            label="活動暱稱",
+            placeholder=("留空表示不修改" if participant else "請填寫活動中使用的暱稱"),
+            required=participant is None,
+            max_length=80,
+        )
+        self.add_item(self.nickname)
+        self.aa_image = None
+        if event_type in {EventType.CHRISTMAS, EventType.GROUP}:
+            self.aa_image = discord.ui.TextInput(
+                label="AA形象",
+                placeholder=("留空表示不修改" if participant else "請填寫本次活動使用的 AA 形象"),
+                required=participant is None,
+                max_length=100,
+            )
+            self.add_item(self.aa_image)
+        self.team_leader = None
+        if event_type is EventType.GROUP:
+            self.team_leader = discord.ui.TextInput(
+                label="是否報名組長？請填是或否",
+                placeholder=("留空表示不修改；填是或否" if participant else "是 / 否"),
+                required=participant is None,
+                max_length=2,
+            )
+            self.add_item(self.team_leader)
+        self.notes = discord.ui.TextInput(
+            label="備註（選填）",
+            placeholder=("留空表示不修改" if participant else "沒有備註可留空"),
+            required=False,
+            max_length=500,
+            style=discord.TextStyle.paragraph,
+        )
+        self.add_item(self.notes)
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        if not interaction.guild or not self.cog.bIsAAFanclub(interaction):
+            await self.cog._error(interaction, "此表單只能在指定伺服器提交。")
+            return
+        nickname = self.nickname.value.strip()
+        if not nickname and self.participant is None:
+            await self.cog._error(interaction, "活動暱稱不可為空白。")
+            return
+        aa_image = self.aa_image.value.strip() if self.aa_image else None
+        if self.aa_image and self.participant is None and not aa_image:
+            await self.cog._error(interaction, "AA形象不可為空白。")
+            return
+        team_leader = None
+        if self.team_leader:
+            answer = self.team_leader.value.strip()
+            if answer and answer not in {"是", "否"}:
+                await self.cog._error(interaction, "組長意願請填「是」或「否」。")
+                return
+            team_leader = (answer == "是") if answer else None
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        try:
+            if self.participant is None:
+                participant = await self.cog.event_service.join(
+                    str(interaction.user.id),
+                    nickname,
+                    aa_image=aa_image or "",
+                    team_leader=team_leader,
+                    notes=self.notes.value,
+                )
+            else:
+                participant = await self.cog.event_service.update_registration(
+                    str(interaction.user.id),
+                    display_name=nickname or None,
+                    aa_image=aa_image,
+                    team_leader=team_leader,
+                    notes=self.notes.value or None,
+                )
+            try:
+                await self.cog._publish_signup_record(participant)
+            except (discord.HTTPException, OSError, ValueError, EventServiceError):
+                logger.warning(
+                    "Could not publish signup message for registration %s",
+                    participant.registration_number,
+                    exc_info=True,
+                )
+                await self.cog._send(
+                    interaction,
+                    f"報名資料已保存，編號為 {participant.registration_number}，但報名區留言同步失敗，請通知管理員。",
+                    ephemeral=True,
+                )
+                return
+            if self.participant is None:
+                try:
+                    await self.cog._publish_participant_avatar(participant, interaction.user)
+                except (AvatarServiceError, EventServiceError, OSError, ValueError):
+                    logger.warning(
+                        "Could not sync avatar for participant %s",
+                        participant.discord_user_id,
+                        exc_info=True,
+                    )
+                    await self.cog._send(
+                        interaction,
+                        f"報名成功，編號為 {participant.registration_number}；頭像同步失敗，管理員可稍後重新同步。",
+                        ephemeral=True,
+                    )
+                    return
+            else:
+                await self.cog._post_registration_status(participant, "更改了報名表")
+                try:
+                    await self.cog._publish_participant_index(
+                        participant,
+                        f"Update participant signup ({participant.registration_number})",
+                    )
+                except Exception:
+                    logger.warning(
+                        "Could not publish updated participant index for registration %s",
+                        participant.registration_number,
+                        exc_info=True,
+                    )
+            verb = "報名成功" if self.participant is None else "報名資料已更新"
+            await self.cog._send(
+                interaction,
+                f"{verb}，編號為 {participant.registration_number}。",
+                ephemeral=True,
+            )
+        except (EventServiceError, OSError, ValueError) as exc:
+            await self.cog._error(interaction, self.cog._user_error(exc))
+        except Exception as exc:
+            await self.cog._unexpected_error(interaction, "signup", exc)
 
 
 async def setup(bot):

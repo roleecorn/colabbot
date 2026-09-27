@@ -97,6 +97,9 @@ class EventService:
             submission_starts_at=submission_starts_at,
             submission_ends_at=submission_ends_at,
             matching_policy=matching_policy,
+            discussion_channel_id=(
+                existing_private.discussion_channel_id if existing_private else None
+            ),
             participants=list(existing_private.participants) if existing_private else [],
         )
         public.validate()
@@ -127,7 +130,15 @@ class EventService:
             None,
         )
 
-    async def join(self, user_id: str, display_name: str = "") -> Participant:
+    async def join(
+        self,
+        user_id: str,
+        display_name: str = "",
+        *,
+        aa_image: str = "",
+        team_leader: bool | None = None,
+        notes: str = "",
+    ) -> Participant:
         user_id = str(user_id)
         event = await self.load_active()
         async with self._lock_for(event.public.event_key):
@@ -154,6 +165,9 @@ class EventService:
                 ),
                 joined_at=now,
                 display_name=display_name,
+                aa_image=aa_image,
+                team_leader=team_leader,
+                notes=notes,
                 registration_number=max(
                     (item.registration_number for item in private.participants), default=0
                 ) + 1,
@@ -161,6 +175,77 @@ class EventService:
             private.participants.append(participant)
             await asyncio.to_thread(self.repository.save_private, private, public)
             return participant
+
+    async def update_registration(
+        self,
+        user_id: str,
+        *,
+        display_name: str | None = None,
+        aa_image: str | None = None,
+        team_leader: bool | None = None,
+        notes: str | None = None,
+    ) -> Participant:
+        """Update supplied signup fields while preserving all omitted values."""
+        user_id = str(user_id)
+        event = await self.load_active()
+        async with self._lock_for(event.public.event_key):
+            public, private = await asyncio.to_thread(
+                self.repository.load_event, event.public.event_key
+            )
+            if event_status(private, self._now(public, self.clock)) is not EventStatus.REGISTRATION_OPEN:
+                raise EventServiceError("目前不是報名期間。")
+            participant = next(
+                (
+                    item for item in private.participants
+                    if item.discord_user_id == user_id and not item.withdrawn
+                ),
+                None,
+            )
+            if participant is None:
+                raise EventServiceError("找不到有效的報名資料。")
+            if display_name is not None:
+                if not display_name.strip():
+                    raise EventServiceError("活動暱稱不可為空白。")
+                participant.display_name = display_name.strip()
+            if aa_image is not None:
+                participant.aa_image = aa_image.strip()
+            if team_leader is not None:
+                participant.team_leader = team_leader
+            if notes is not None:
+                participant.notes = notes.strip()
+            await asyncio.to_thread(self.repository.save_private, private, public)
+            return participant
+
+    async def set_signup_message(
+        self, user_id: str, channel_id: str, message_id: str
+    ) -> Participant:
+        event = await self.load_active()
+        async with self._lock_for(event.public.event_key):
+            public, private = await asyncio.to_thread(
+                self.repository.load_event, event.public.event_key
+            )
+            participant = next(
+                (
+                    item for item in private.participants
+                    if item.discord_user_id == str(user_id)
+                ),
+                None,
+            )
+            if participant is None:
+                raise EventServiceError("找不到有效的報名資料。")
+            participant.signup_channel_id = str(channel_id)
+            participant.signup_message_id = str(message_id)
+            await asyncio.to_thread(self.repository.save_private, private, public)
+            return participant
+
+    async def set_discussion_channel(self, channel_id: str) -> None:
+        event = await self.load_active()
+        async with self._lock_for(event.public.event_key):
+            public, private = await asyncio.to_thread(
+                self.repository.load_event, event.public.event_key
+            )
+            private.discussion_channel_id = str(channel_id)
+            await asyncio.to_thread(self.repository.save_private, private, public)
 
     async def leave(self, user_id: str) -> Participant:
         user_id = str(user_id)
